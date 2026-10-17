@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simon des pattes</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .pads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px, 3vw, 22px); max-width: 480px; margin: 0 auto; width: 100%; }
+  .pad {
+    aspect-ratio: 1; max-width: 100%; border: 3px solid var(--edge); border-radius: 30px; cursor: pointer; font-size: clamp(2.6rem, 12vw, 4.4rem);
+    display: grid; place-items: center; box-shadow: 5px 5px 0 var(--edge); transition: transform .08s, filter .08s; filter: saturate(.7) brightness(.92);
+  }
+  .pad.lit { filter: saturate(1.25) brightness(1.15); transform: scale(1.05); box-shadow: 0 0 0 6px var(--paper), 0 0 28px 8px currentColor; }
+  .pad:disabled { cursor: default; }
+  .p0 { background: #f5bcc6; color: #f5bcc6; } .p1 { background: #f7d070; color: #f7d070; }
+  .p2 { background: #a8d5a2; color: #a8d5a2; } .p3 { background: #c8a7e8; color: #c8a7e8; }
+  .status { text-align: center; font-family: var(--f-hand); font-size: 1.7rem; color: var(--cocoa); min-height: 1.4em; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Niveau : <b id="lvl">0</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Simon des pattes</h1>
+    <p class="hand">Regarde les pattes s'allumer, puis répète la suite. Elle s'allonge à chaque tour. Sticker au niveau 8.</p>
+    <div class="row">
+      <button class="btn" id="go">Commencer</button>
+      <button class="btn ghost" id="snd" aria-pressed="true">🔊 Son activé</button>
+    </div>
+  </section>
+
+  <section class="sticker board-zone">
+    <p class="status" id="status" aria-live="polite">Touche « Commencer »</p>
+    <div class="pads" id="pads">
+      <button class="pad p0" data-p="0" aria-label="Patte rose" disabled><span aria-hidden="true">🐾</span></button>
+      <button class="pad p1" data-p="1" aria-label="Patte jaune" disabled><span aria-hidden="true">🐾</span></button>
+      <button class="pad p2" data-p="2" aria-label="Patte verte" disabled><span aria-hidden="true">🐾</span></button>
+      <button class="pad p3" data-p="3" aria-label="Patte violette" disabled><span aria-hidden="true">🐾</span></button>
+    </div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const FREQ = [523.25, 659.25, 783.99, 1046.5];
+  const pads = [...document.querySelectorAll(".pad")];
+  const statusEl = document.getElementById("status");
+  let seq = [], pos = 0, listening = false, ac = null, sound = store.get("simon:sound", true);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function tone(i, ms) {
+    if (!sound || !ac) return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "triangle"; o.frequency.value = FREQ[i];
+    g.gain.setValueAtTime(.0001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.3, ac.currentTime + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + ms / 1000);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + ms / 1000 + .05);
+  }
+  async function flash(i, ms) { pads[i].classList.add("lit"); tone(i, ms); await sleep(ms); pads[i].classList.remove("lit"); }
+
+  function hud() {
+    document.getElementById("lvl").textContent = Math.max(0, seq.length - (listening ? 1 : 0));
+    const b = store.get("best:simon", null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+  function setSnd() { const b = document.getElementById("snd"); b.textContent = sound ? "🔊 Son activé" : "🔈 Son coupé"; b.setAttribute("aria-pressed", sound); }
+
+  async function next() {
+    listening = false; pads.forEach(p => p.disabled = true);
+    seq.push((Math.random() * 4) | 0);
+    document.getElementById("lvl").textContent = seq.length - 1;
+    statusEl.textContent = "Regarde bien…";
+    await sleep(650);
+    const speed = Math.max(260, 560 - seq.length * 22);
+    for (const i of seq) { await flash(i, speed); await sleep(speed * .35); }
+    statusEl.textContent = "À toi !";
+    pos = 0; listening = true; pads.forEach(p => p.disabled = false);
+  }
+
+  async function press(i) {
+    if (!listening) return;
+    flash(i, 220);
+    if (i !== seq[pos]) return fail();
+    pos++;
+    if (pos === seq.length) {
+      listening = false;
+      const lvl = seq.length;
+      best("simon", lvl); hud();
+      if (lvl >= 8) award("simon");
+      statusEl.textContent = ["Bravo !", "Trop forte !", "Parfait !", "Oui !"][(Math.random() * 4) | 0];
+      await sleep(500); next();
+    }
+  }
+
+  function fail() {
+    listening = false; pads.forEach(p => p.disabled = true);
+    const lvl = seq.length - 1;
+    statusEl.textContent = "Oups, ce n'était pas celle-là.";
+    if (ac && sound) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 160; g.gain.value = .2; o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + .35); }
+    document.getElementById("go").disabled = false;
+    setTimeout(() => showEnd({ title: "Fin de la partie", text: `Tu as réussi <b>${lvl}</b> tour${lvl > 1 ? "s" : ""}.`, again: begin }), 500);
+  }
+
+  function begin() {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch { ac = null; }
+    seq = []; document.getElementById("go").disabled = true; next();
+  }
+
+  document.getElementById("pads").addEventListener("pointerdown", e => { const p = e.target.closest(".pad"); if (p && !p.disabled) press(+p.dataset.p); });
+  document.getElementById("go").addEventListener("click", begin);
+  document.getElementById("snd").addEventListener("click", () => { sound = !sound; store.set("simon:sound", sound); setSnd(); });
+  setSnd(); hud();
+</script>
+</body>
+</html>

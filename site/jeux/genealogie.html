@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L'Affaire du médaillon</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  :root { --parch: #f1e2c4; --parch-ink: #3a2a1e; --parch-line: #c9ad80; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --parch: #e6d3ae; --parch-ink: #2b1e14; --parch-line: #b8996a; } }
+  :root[data-theme="dark"] { --parch: #e6d3ae; --parch-ink: #2b1e14; --parch-line: #b8996a; }
+
+  .steps { display: flex; gap: 8px; flex-wrap: wrap; }
+  .step {
+    border: 2.5px solid var(--edge); border-radius: 999px; background: var(--paper); padding: 6px 14px; font-weight: 800;
+    cursor: pointer; display: inline-flex; gap: 6px; align-items: center; font-size: .92rem;
+  }
+  .step[aria-current="step"] { background: var(--rose); color: var(--on-rose); box-shadow: 3px 3px 0 var(--edge); }
+  .step:disabled { opacity: .45; cursor: not-allowed; }
+  .step .n { font-variant-numeric: tabular-nums; }
+
+  .chapter { display: grid; gap: 22px; }
+  .ch-head { display: grid; gap: 8px; }
+  .ch-head .eyebrow { font-weight: 800; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; color: var(--rose); }
+  .ch-head h2 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+  .ch-head p { max-width: 68ch; }
+
+  /* Pièces d'archives */
+  .docs { display: grid; gap: 12px; min-width: 0; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { border: 2px solid var(--edge); background: var(--paper-2); border-radius: 10px; padding: 5px 12px; font-weight: 700; cursor: pointer; font-size: .88rem; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+  .paper {
+    background: var(--parch); color: var(--parch-ink); border: 1px solid var(--parch-line); border-radius: 6px;
+    padding: 22px clamp(14px, 3vw, 28px); font-family: var(--f-old); font-size: 1.08rem; line-height: 1.6;
+    box-shadow: inset 0 0 60px rgba(120, 80, 30, .25), 4px 4px 0 var(--edge); position: relative; min-width: 0;
+  }
+  .paper .src { font-family: var(--f-body); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; opacity: .7; margin-bottom: 12px; }
+  .paper .act { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 18px; }
+  .paper .marg { border-right: 1px solid var(--parch-line); padding-right: 12px; font-size: .95rem; }
+  .paper .marg b { font-variant: small-caps; font-size: 1.1rem; }
+  .paper .mention { font-style: italic; font-size: .9rem; margin-top: 10px; }
+  .paper .latin { font-style: italic; }
+  .paper .tr { font-family: var(--f-body); font-size: .8rem; opacity: .75; margin-top: 12px; }
+  .paper table { border-collapse: collapse; width: 100%; font-size: .98rem; }
+  .paper th, .paper td { border: 1px solid var(--parch-line); padding: 5px 8px; text-align: left; }
+  .paper th { font-family: var(--f-body); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+  .table-scroll { overflow-x: auto; }
+  @media (max-width: 560px) { .paper .act { grid-template-columns: minmax(0, 1fr); } .paper .marg { border-right: 0; border-bottom: 1px solid var(--parch-line); padding: 0 0 10px; } }
+
+  /* Médaillon */
+  .case { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 26px; align-items: center; }
+  .medal {
+    width: 170px; height: 170px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 35% 30%, #fbfbf7, #c9c6bd 55%, #8d8a83);
+    border: 3px solid #6f6c66; box-shadow: 0 0 0 7px #b9b6ad, 6px 8px 0 7px var(--edge); color: #4a4741;
+    font-family: var(--f-old); font-style: italic; font-size: 1.35rem; line-height: 1.2; transform: rotate(-6deg);
+  }
+  .medal small { display: block; font-size: 1rem; letter-spacing: .06em; }
+  @media (max-width: 600px) { .case { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+
+  /* Questions */
+  .qs { display: grid; gap: 16px; }
+  .q { display: grid; gap: 10px; padding: 16px; border-radius: 16px; background: var(--paper-2); }
+  .q .qt { font-weight: 800; }
+  .q .qt .num { color: var(--rose); margin-right: 6px; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 8px; }
+  .opt {
+    text-align: left; border: 2px solid var(--edge); border-radius: 12px; background: var(--paper); padding: 9px 12px;
+    cursor: pointer; font-weight: 600; transition: transform .08s;
+  }
+  .opt:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--edge); }
+  .opt.sel { background: var(--blush); }
+  .opt.good { background: var(--ok); color: var(--paper); border-color: var(--ok); }
+  .opt.bad { background: var(--bad); color: var(--paper); border-color: var(--bad); animation: shake .3s; }
+  .opt:disabled { cursor: default; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .explain { border-left: 4px solid var(--rose); padding-left: 12px; font-size: .95rem; }
+  .numrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .numrow input { width: 8em; border: 2px solid var(--edge); border-radius: 12px; padding: 8px 12px; background: var(--paper); font-weight: 800; }
+
+  /* Arbre */
+  .two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  .tree { display: grid; gap: 14px; }
+  .gen { display: grid; gap: 6px; }
+  .gen-label { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--cocoa); }
+  .gen-row { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 8px; }
+  .slot { display: grid; gap: 4px; padding: 8px; border-radius: 12px; border: 2px solid var(--edge); background: var(--paper); min-width: 0; }
+  .slot label { font-size: .75rem; font-weight: 800; color: var(--rose); font-variant-numeric: tabular-nums; }
+  .slot select { width: 100%; border: 1.5px solid var(--taupe); border-radius: 8px; padding: 4px; background: var(--paper-2); font-size: .85rem; min-width: 0; }
+  .slot.fixed { background: var(--blush); }
+  .slot.fixed span { font-weight: 800; font-size: .9rem; }
+  .slot.good { border-color: var(--ok); box-shadow: inset 0 0 0 2px var(--ok); }
+  .slot.bad { border-color: var(--bad); box-shadow: inset 0 0 0 2px var(--bad); }
+  @media (max-width: 520px) { .gen-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .rule { font-size: .92rem; background: var(--paper-2); border-radius: 12px; padding: 10px 14px; }
+
+  .facts { display: grid; gap: 8px; }
+  .facts .opt { font-family: var(--f-old); font-size: 1.05rem; }
+
+  .nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* Diplôme */
+  .diploma-frame { background: var(--sand) url("../assets/img/leopard.jpg") center / 140% auto; padding: 18px; border-radius: 20px; border: 2.5px solid var(--edge); box-shadow: var(--shadow); }
+  .diploma {
+    background: var(--parch); color: var(--parch-ink); border-radius: 10px; padding: clamp(18px, 5vw, 44px);
+    text-align: center; display: grid; gap: 12px; justify-items: center; font-family: var(--f-old);
+  }
+  .diploma .k { font-family: var(--f-body); font-weight: 800; letter-spacing: .2em; text-transform: uppercase; font-size: .78rem; }
+  .diploma h2 { font-family: var(--f-display); font-size: clamp(1.9rem, 6vw, 3rem); color: #c4486a; }
+  .diploma .who { font-family: var(--f-hand); font-size: clamp(2rem, 7vw, 3.2rem); line-height: 1; }
+  .diploma .mention { font-style: italic; font-size: 1.25rem; }
+  .diploma .sig { display: flex; justify-content: space-between; width: 100%; max-width: 520px; gap: 16px; flex-wrap: wrap; font-size: .95rem; }
+  .diploma .sig .hand { font-family: var(--f-hand); font-size: 1.6rem; }
+  .lineage { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-weight: 700; }
+  .lineage span { background: var(--paper-2); border-radius: 999px; padding: 4px 12px; border: 2px solid var(--edge); }
+  .lineage i { font-style: normal; color: var(--rose); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Points : <b id="pts">0</b> / <b id="max">0</b></span>
+      <button class="btn ghost" id="reset" type="button">Rouvrir le dossier à zéro</button>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>L'Affaire du médaillon</h1>
+    <p class="hand">Un cas pratique de généalogie, en six étapes. Les personnes sont inventées, les méthodes sont vraies.</p>
+    <nav class="steps" id="steps" aria-label="Étapes de l'enquête"></nav>
+  </section>
+
+  <section class="sticker chapter" id="chapter" aria-live="polite"></section>
+</main>
+
+<script src="../assets/js/common.js"></script>
+<script>
+/* ------------------------------------------------------------------ données */
+const DOCS = {
+  lucienne: {
+    tab: "Naissance 1929",
+    html: `<div class="src">Ville de Vienne (Isère) · Registre des naissances · 1929 · acte n° 112</div>
+      <div class="act"><div class="marg"><b>Perrin</b><br>Lucienne Rose
+        <div class="mention">Mariée à Vienne le six mai 1950 avec André Lucien LEBRUN.</div></div>
+      <div>Le quatre avril mil neuf cent vingt-neuf, à six heures du matin, est née en son domicile, rue des Clercs n° 14,
+      <b>Lucienne Rose</b>, du sexe féminin, de <b>Émile Louis PERRIN</b>, cordonnier, né à Vienne le dix-sept août mil huit cent
+      quatre-vingt-quatorze, et de <b>Marguerite VIDAL</b>, couturière, née à Vienne le premier février mil huit cent
+      quatre-vingt-dix-neuf, son épouse, domiciliés à Vienne. Dressé le cinq avril mil neuf cent vingt-neuf, à dix heures,
+      sur la déclaration du père, qui, lecture faite, a signé avec Nous, Adjoint au Maire.</div></div>`,
+  },
+  mariage1893: {
+    tab: "Mariage 1893",
+    html: `<div class="src">Ville de Vienne (Isère) · Registre des mariages · 1893 · acte n° 21</div>
+      <div class="act"><div class="marg"><b>Perrin</b><br>et<br><b>Martin</b></div>
+      <div>L'an mil huit cent quatre-vingt-treize, le onze février, à dix heures du matin, devant Nous, Maire de Vienne, ont comparu
+      publiquement en la maison commune : <b>Louis PERRIN</b>, tisserand, né à Vienne le deux février mil huit cent soixante-six,
+      âgé de vingt-sept ans, domicilié à Vienne, fils majeur de <b>Claude PERRIN</b>, tisserand, et de <b>Marie BONNET</b>,
+      sans profession, ses père et mère, ici présents et consentants ;<br>
+      Et <b>Rose MARTIN</b>, ourdisseuse, née à Vienne le douze mars mil huit cent soixante-dix, âgée de vingt-deux ans,
+      domiciliée à Vienne, fille majeure de <b>Jean MARTIN</b>, drapier, ici présent et consentant, et de feue
+      <b>Adèle ROUX</b>, décédée à Vienne le neuf janvier mil huit cent quatre-vingt-huit.<br>
+      Lesquels Nous ont requis de procéder à la célébration de leur mariage…</div></div>`,
+  },
+  recensement: {
+    tab: "Recensement 1896",
+    html: `<div class="src">Dénombrement de la population de 1896 · Vienne · rue de la Charité · ménage n° 57</div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Nom</th><th>Prénoms</th><th>Âge</th><th>Profession</th><th>Situation dans le ménage</th></tr></thead>
+        <tbody>
+          <tr><td>Perrin</td><td>Louis</td><td>30</td><td>tisserand</td><td>chef</td></tr>
+          <tr><td>Martin</td><td>Rose</td><td>26</td><td>ourdisseuse</td><td>sa femme</td></tr>
+          <tr><td>Perrin</td><td>Émile</td><td>1</td><td>—</td><td>fils</td></tr>
+          <tr><td>Martin</td><td>Jean</td><td>67</td><td>drapier retiré</td><td>beau-père, veuf</td></tr>
+        </tbody></table></div>
+      <div class="tr">Astuce de pro : dans les recensements, les femmes mariées apparaissent souvent sous leur nom de naissance.</div>`,
+  },
+  mariage1852: {
+    tab: "Mariage 1852",
+    html: `<div class="src">Ville de Vienne (Isère) · Registre des mariages · 1852 · acte n° 48</div>
+      <div class="act"><div class="marg"><b>Martin</b><br>et<br><b>Roux</b></div>
+      <div>L'an mil huit cent cinquante-deux, le vingt-quatre avril, à dix heures du matin, par-devant Nous, Maire, officier de
+      l'état civil de la ville de Vienne, sont comparus : <b>Jean MARTIN</b>, drapier, âgé de vingt-trois ans, né en cette ville
+      le trois juin mil huit cent vingt-huit, y domicilié, fils mineur de <b>Pierre MARTIN</b>, cardeur, et de
+      <b>Thérèse GIRAUD</b>, ménagère, ici présents et consentants ;<br>
+      Et <b>Adèle ROUX</b>, dévideuse, âgée de vingt ans, née à Pont-Évêque le quatorze septembre mil huit cent trente et un,
+      domiciliée à Vienne, fille mineure de <b>François ROUX</b>, cultivateur, et de <b>Louise CHABERT</b>, présents et
+      consentants. Les publications ayant été faites les dimanches onze et dix-huit avril courant, sans opposition,
+      Nous avons prononcé au nom de la loi que Jean MARTIN et Adèle ROUX sont unis par le mariage.</div></div>
+      <div class="tr">« Fils mineur » à 23 ans : jusqu'en 1907, un homme avait besoin du consentement de ses parents pour se marier avant 25 ans.</div>`,
+  },
+  an8: {
+    tab: "Naissance an VIII",
+    html: `<div class="src">Commune de Vienne · Registre des naissances · an VIII de la République</div>
+      <div class="act"><div class="marg"><b>Martin</b><br>Pierre</div>
+      <div>Du <b>dix-huit brumaire an huit</b> de la République française. Acte de naissance de <b>Pierre MARTIN</b>,
+      <b>né hier</b> à dix heures du soir, fils de <b>Joseph MARTIN</b>, laboureur, et de <b>Catherine BLANC</b>, son épouse,
+      demeurant en cette commune. Le sexe de l'enfant a été reconnu être masculin. Premier témoin : <b>Antoine MARTIN</b>,
+      aïeul de l'enfant, âgé de soixante ans ; second témoin : Jean-Baptiste ROLLAND, voisin, âgé de trente-quatre ans.
+      Sur la réquisition à nous faite par le père de l'enfant. Et ont signé, sauf le premier témoin qui a déclaré ne le savoir.
+      Constaté par moi, agent municipal.</div></div>`,
+  },
+  bapteme: {
+    tab: "Baptême 1771 (latin)",
+    html: `<div class="src">Paroisse Saint-Martin de Vienne · Registre des baptêmes, mariages et sépultures · 1771</div>
+      <div class="act"><div class="marg"><b>Martin</b><br>Josephus</div>
+      <div class="latin">Anno Domini millesimo septingentesimo septuagesimo primo, die decima quinta mensis martii,
+      baptizatus est a me infrascripto vicario <b>Josephus</b>, natus heri, filius legitimus <b>Antonii MARTIN</b> agricolae
+      et <b>Annae FABRE</b> conjugum. Patrinus fuit Josephus FABRE, avunculus infantis, matrina vero <b>Joanna MARTIN</b>,
+      amita, qui signare nescierunt.<br><span style="float:right">Ribaud, vicarius</span></div></div>
+      <div class="tr" style="clear:both">Petit lexique : <i>millesimo</i> = 1000 · <i>septingentesimo</i> = 700 · <i>septuagesimo</i> = 70 · <i>primo</i> = 1 · <i>heri</i> = hier · <i>avunculus</i> = oncle maternel.</div>`,
+  },
+};
+
+const NAMES = ["Adèle ROUX", "André LEBRUN", "Catherine BLANC", "Claude PERRIN", "Émile PERRIN", "François ROUX", "Jean MARTIN",
+  "Joseph MARTIN", "Louis PERRIN", "Louise CHABERT", "Marguerite VIDAL", "Marie BONNET", "Pierre MARTIN", "Rose MARTIN", "Thérèse GIRAUD"];
+const TREE = [
+  { label: "Génération 7 · branche Martin–Roux", slots: { 84: "Pierre MARTIN", 85: "Thérèse GIRAUD", 86: "François ROUX", 87: "Louise CHABERT" } },
+  { label: "Génération 6 · quadrisaïeuls", slots: { 40: "Claude PERRIN", 41: "Marie BONNET", 42: "Jean MARTIN", 43: "Adèle ROUX" } },
+  { label: "Génération 5 · trisaïeuls", slots: { 20: "Louis PERRIN", 21: "Rose MARTIN" } },
+  { label: "Génération 4 · arrière-grands-parents", slots: { 10: "Émile PERRIN", 11: "Marguerite VIDAL" } },
+  { label: "Génération 3 · grands-parents", fixed: { 5: "Lucienne PERRIN" } },
+];
+const TREE_ANS = Object.assign({}, ...TREE.map(g => g.slots || {}));
+
+const CHAPTERS = [
+  {
+    key: "dossier", short: "Le dossier", title: "Le dossier n° 2026-047", eyebrow: "Étape 1 · la commande",
+    intro: `Ta cliente, <b>Hélène LEBRUN</b>, 38 ans, vide la maison de sa grand-mère <b>Lucienne</b>, à Vienne (Isère).
+      Dans une boîte en fer, elle trouve un médaillon en argent gravé, quelques papiers de famille et aucune explication.
+      Elle te confie une mission simple : <b>à qui appartenait ce médaillon, et quel est son lien avec elle ?</b>`,
+    medal: true,
+    questions: [],
+  },
+  {
+    key: "bases", short: "Les bases", title: "Réviser ses classiques", eyebrow: "Étape 2 · échauffement",
+    intro: `Avant d'ouvrir les archives, un petit échauffement sur les signes et la numérotation Sosa-Stradonitz.
+      Rappel : la personne dont on fait l'arbre porte le n° 1. Le père d'une personne n° <i>n</i> porte le n° 2<i>n</i>, sa mère le n° 2<i>n</i>+1.`,
+    questions: [
+      { id: "b1", q: "Dans une fiche, « ° 12.03.1870 » signifie…", o: ["une naissance", "un mariage", "un décès", "un baptême"], a: 0,
+        x: "Le petit rond ° indique la naissance. Le baptême s'écrit souvent « b » ou « bpt »." },
+      { id: "b2", q: "Et « x 24.04.1852 » ?", o: ["un divorce", "un mariage", "un décès", "une signature"], a: 1,
+        x: "Le x, c'est le mariage. Le divorce se note )(." },
+      { id: "b3", q: "« † 1888 » indique…", o: ["un baptême", "un décès", "une inhumation", "une naissance hors mariage"], a: 1,
+        x: "La croix † marque le décès. L'inhumation se note souvent (s) pour sépulture." },
+      { id: "b4", q: "« ca 1771 » veut dire…", o: ["en 1771 exactement", "avant 1771", "environ 1771", "après 1771"], a: 2,
+        x: "ca = circa, « environ ». On l'utilise quand une date est déduite d'un âge, par exemple." },
+      { id: "b5", q: "Hélène est le n° 1. Quel est le numéro Sosa de son père, Marc ?", o: ["2", "3", "4", "10"], a: 0,
+        x: "Le père de 1 est 2 × 1 = 2. Sa mère est 3." },
+      { id: "b6", q: "Lucienne est la mère de Marc. Quel est son numéro Sosa ?", o: ["3", "4", "5", "6"], a: 2,
+        x: "Mère de 2 → 2 × 2 + 1 = 5. Son mari André LEBRUN est le n° 4." },
+      { id: "b7", q: "En dehors du n° 1, les femmes d'un arbre Sosa ont toujours…", o: ["un numéro pair", "un numéro impair", "un numéro multiple de 3", "un numéro inférieur à 100"], a: 1,
+        x: "Les hommes sont pairs, les femmes impaires. Pratique pour repérer une erreur de saisie d'un coup d'œil." },
+    ],
+  },
+  {
+    key: "actes", short: "Les actes", title: "Remonter la branche de Lucienne", eyebrow: "Étape 3 · dépouillement",
+    intro: `Dans la boîte, quatre documents. Lis-les attentivement et place chaque ancêtre sur son numéro Sosa.
+      Attention, trois noms de la liste sont des intrus (pour l'instant).`,
+    docs: ["lucienne", "mariage1893", "recensement", "mariage1852"],
+    tree: true,
+    questions: [],
+  },
+  {
+    key: "piege", short: "Le piège", title: "L'arbre trouvé en ligne", eyebrow: "Étape 4 · esprit critique",
+    intro: `Hélène a aussi imprimé un arbre publié en ligne par un certain « genea_passion_38 ». Il a l'air sérieux.
+      Compare-le avec les actes de l'étape précédente.`,
+    docs: ["mariage1893", "recensement", "mariage1852"],
+    questions: [
+      { id: "p1", type: "multi", pts: 2, q: "Deux de ces informations sont fausses. Lesquelles ?",
+        o: ["Jean MARTIN, ° 03.06.1828 à Vienne, drapier", "x 24.04.1852 à Vienne avec Adèle ROUX",
+            "Adèle ROUX, ° 14.09.1841 à Pont-Évêque", "Rose MARTIN, ° 12.03.1870 à Vienne, leur fille",
+            "Adèle ROUX, † 09.01.1898 à Vienne", "Jean MARTIN, recensé veuf en 1896 chez sa fille"],
+        a: [2, 4],
+        x: `Née en 1841, Adèle se serait mariée à 10 ans : l'acte de 1852 dit 20 ans, donc 1831. Et en 1893 elle est déjà
+            « feue », décédée le 9 janvier 1888 : le recensement de 1896 confirme que Jean est veuf. Une coquille de 10 ans
+            sur un chiffre, c'est l'erreur de recopie la plus fréquente.` },
+      { id: "p2", q: "Que faire de cet arbre en ligne ?",
+        o: ["Le recopier, il a l'air sérieux", "Ne garder que ce que je vérifie dans les actes, et citer mes sources",
+            "L'ignorer complètement", "Garder la date la plus récente quand deux sources se contredisent"], a: 1,
+        x: "Un arbre en ligne est une piste, pas une preuve. Chaque information doit renvoyer à une source primaire." },
+    ],
+  },
+  {
+    key: "loin", short: "Remonter le temps", title: "La Révolution et le latin", eyebrow: "Étape 5 · archives anciennes",
+    intro: `Les Archives t'envoient deux actes plus anciens de la lignée MARTIN : la naissance de Pierre, le père de Jean,
+      sous le calendrier républicain, puis un baptême du registre paroissial, rédigé en latin.`,
+    docs: ["an8", "bapteme"],
+    questions: [
+      { id: "l1", q: "À quelle date grégorienne correspond le 18 brumaire an VIII ?", o: ["18 novembre 1799", "9 novembre 1799", "9 octobre 1800", "18 octobre 1798"], a: 1,
+        x: "C'est le jour du coup d'État de Bonaparte. Brumaire, « le mois des brumes », est le 2ᵉ mois de l'année républicaine, à cheval sur octobre et novembre." },
+      { id: "l2", q: "D'après l'acte, Pierre MARTIN est donc né le…", o: ["9 novembre 1799", "8 novembre 1799", "17 novembre 1799", "10 novembre 1799"], a: 1,
+        x: "« Né hier » : la date de l'acte n'est pas toujours celle de la naissance. Un grand classique." },
+      { id: "l3", q: "Antoine MARTIN, premier témoin, est « aïeul de l'enfant ». Pour Pierre, c'est…", o: ["son oncle", "son parrain", "son grand-père", "son arrière-grand-père"], a: 2,
+        x: "Aïeul = grand-parent. Bisaïeul = arrière-grand-parent, trisaïeul = arrière-arrière." },
+      { id: "l4", q: "Pierre est le n° 84. Quel est le numéro Sosa de son père, Joseph ?", o: ["85", "126", "168", "169"], a: 2,
+        x: "2 × 84 = 168. Catherine BLANC est le n° 169." },
+      { id: "l5", q: "« Millesimo septingentesimo septuagesimo primo » : en quelle année ?", o: ["1717", "1701", "1771", "1777"], a: 2,
+        x: "1000 + 700 + 70 + 1 = 1771." },
+      { id: "l6", q: "Joseph est baptisé le 15 mars 1771. Il est né le…", o: ["15 mars 1771", "14 mars 1771", "1er mars 1771", "15 mai 1771"], a: 1,
+        x: "Natus heri : né la veille. Les enfants étaient baptisés très vite, souvent le jour même ou le lendemain." },
+      { id: "l7", q: "« Qui signare nescierunt » signifie…", o: ["qui ont refusé de signer", "qui n'ont pas su signer", "qui étaient absents", "qui ont signé"], a: 1,
+        x: "La formule revient sans cesse : beaucoup de parrains et marraines ne savaient pas écrire." },
+      { id: "l8", q: "La marraine, Joanna MARTIN, est dite « amita ». C'est…", o: ["la tante paternelle", "la tante maternelle", "la grand-mère", "la sage-femme"], a: 0,
+        x: "Amita = sœur du père, donc d'Antoine MARTIN. Matertera = sœur de la mère. Avunculus, c'est l'oncle maternel : Joseph FABRE est bien le frère d'Anne." },
+      { id: "l9", q: "Et le numéro Sosa d'Antoine MARTIN, le père de Joseph ?", o: ["168", "336", "337", "672"], a: 1,
+        x: "2 × 168 = 336. Anne FABRE porte le 337. Tu viens de remonter neuf générations." },
+    ],
+  },
+  {
+    key: "verdict", short: "Le verdict", title: "Le verdict", eyebrow: "Étape 6 · le rapport",
+    intro: `Le médaillon est gravé <b>« J. M. — 24.IV.1852 »</b>. Plusieurs personnes aux initiales J. M. sont passées dans ton enquête. À toi de conclure.`,
+    medal: true,
+    questions: [
+      { id: "v1", q: "À qui appartenait le médaillon ?",
+        o: ["Joseph MARTIN, baptisé en 1771", "Joanna MARTIN, marraine en 1771", "Jean MARTIN, marié le 24 avril 1852", "Jean-Baptiste ROLLAND, témoin en l'an VIII"], a: 2,
+        x: "24.IV.1852, c'est le jour de son mariage avec Adèle ROUX. Les deux autres J. M. sont morts bien avant 1852, et ROLLAND n'a pas les bonnes initiales." },
+      { id: "v2", type: "num", q: "Quel est le numéro Sosa de Jean MARTIN dans l'arbre d'Hélène ?", a: 42,
+        x: "1 Hélène → 2 Marc → 5 Lucienne → 10 Émile → 21 Rose → 42 Jean." },
+      { id: "v3", q: "Pour Hélène, Jean MARTIN est son…", o: ["bisaïeul", "trisaïeul", "quadrisaïeul", "aïeul"], a: 2,
+        x: "Le n° 42 est dans la 6ᵉ génération (32 à 63) : arrière-arrière-arrière-grand-père, soit quadrisaïeul." },
+      { id: "v4", q: "Par quel chemin le médaillon est-il probablement arrivé chez Lucienne ?",
+        o: ["Jean → sa fille Rose → son fils Émile → sa fille Lucienne", "Jean → Pierre → Joseph → Lucienne",
+            "Adèle → Marguerite VIDAL → Lucienne", "Hélène l'a acheté dans une brocante"], a: 0,
+        x: "Jean vivait chez Rose en 1896 : c'est sans doute elle qui l'a gardé, puis transmis à son fils Émile, le père de Lucienne." },
+    ],
+  },
+];
+
+/* ------------------------------------------------------------------ état */
+const fresh = () => ({ ch: 0, max: 0, pts: {}, ok: {}, tried: {}, tree: {} });
+let S = Object.assign(fresh(), store.get("genea", {}));
+const save = () => store.set("genea", S);
+
+const MAX = CHAPTERS.reduce((s, c) => s + c.questions.reduce((t, q) => t + (q.pts || 1), 0), 0) + Object.keys(TREE_ANS).length;
+const total = () => Object.values(S.pts).reduce((a, b) => a + b, 0);
+function chapterDone(c) {
+  const ch = CHAPTERS[c];
+  return ch.questions.every(q => S.ok[q.id]) && (!ch.tree || S.ok.tree);
+}
+
+/* ------------------------------------------------------------------ rendu */
+const $ch = document.getElementById("chapter");
+
+function renderSteps() {
+  document.getElementById("steps").innerHTML = CHAPTERS.map((c, i) =>
+    `<button class="step" data-i="${i}" ${i > S.max ? "disabled" : ""} ${i === S.ch ? 'aria-current="step"' : ""}>
+       <span class="n">${chapterDone(i) && i < S.max ? "✓" : i + 1}</span>${c.short}</button>`).join("");
+  document.getElementById("pts").textContent = total();
+  document.getElementById("max").textContent = MAX;
+}
+document.getElementById("steps").addEventListener("click", e => {
+  const b = e.target.closest(".step"); if (!b || b.disabled) return;
+  S.ch = +b.dataset.i; save(); render();
+});
+
+function medalHTML() {
+  return `<div class="medal" aria-label="Médaillon gravé J. M., 24 avril 1852"><div>J. M.<small>24 · IV · 1852</small></div></div>`;
+}
+
+function docsHTML(ids) {
+  return `<div class="docs"><div class="tabs" role="tablist">${ids.map((id, i) =>
+      `<button class="tab" role="tab" data-doc="${id}" aria-selected="${i === 0}">${DOCS[id].tab}</button>`).join("")}</div>
+    <article class="paper" data-paper>${DOCS[ids[0]].html}</article></div>`;
+}
+
+function render() {
+  const ch = CHAPTERS[S.ch];
+  let html = `<div class="ch-head"><span class="eyebrow">${ch.eyebrow}</span><h2>${ch.title}</h2></div>`;
+  if (ch.medal) html += `<div class="case">${medalHTML()}<p>${ch.intro}</p></div>`;
+  else html += `<p style="max-width:68ch">${ch.intro}</p>`;
+
+  if (ch.tree) {
+    html += `<div class="two">${docsHTML(ch.docs)}<div class="tree" id="tree">${treeHTML()}</div></div>`;
+  } else if (ch.docs) {
+    html += docsHTML(ch.docs);
+  }
+  if (ch.questions.length) html += `<div class="qs">${ch.questions.map((q, i) => qHTML(q, i)).join("")}</div>`;
+
+  if (S.ch === 0) {
+    html += `<p>Ta méthode : réviser les bases, dépouiller les actes, vérifier ce qu'on trouve en ligne, remonter jusqu'à l'Ancien Régime, puis rendre ton rapport.
+      Chaque bonne réponse du premier coup rapporte un point. À la fin, le jury te remet ton diplôme.</p>`;
+  }
+  const last = S.ch === CHAPTERS.length - 1;
+  html += `<div class="nav">
+      <button class="btn ghost" data-nav="-1" ${S.ch === 0 ? "hidden" : ""}>← Étape précédente</button>
+      <span class="hand" style="font-family:var(--f-hand);font-size:1.3rem;color:var(--cocoa)" id="hint"></span>
+      <button class="btn" data-nav="1" ${chapterDone(S.ch) ? "" : "disabled"}>${S.ch === 0 ? "Accepter la mission" : last ? "Rendre mon rapport" : "Étape suivante →"}</button>
+    </div>`;
+  if (last && S.done) html += diplomaHTML();
+  $ch.innerHTML = html;
+  hint();
+  renderSteps();
+}
+
+function hint() {
+  const el = document.getElementById("hint"); if (!el) return;
+  const ch = CHAPTERS[S.ch];
+  const left = ch.questions.filter(q => !S.ok[q.id]).length + (ch.tree && !S.ok.tree ? 1 : 0);
+  el.textContent = left ? `Encore ${left} ${left > 1 ? "énigmes" : "énigme"} à résoudre` : "";
+}
+
+function qHTML(q, i) {
+  const ok = S.ok[q.id];
+  let body = "";
+  if (q.type === "num") {
+    body = `<div class="numrow"><input id="in-${q.id}" inputmode="numeric" aria-label="Numéro Sosa" value="${ok ? q.a : ""}" ${ok ? "disabled" : ""}>
+      <button class="btn" data-num="${q.id}" ${ok ? "disabled" : ""}>Valider</button></div>`;
+  } else {
+    const multi = q.type === "multi";
+    body = `<div class="${multi ? "facts" : "opts"}">${q.o.map((o, j) => {
+      const isGood = multi ? q.a.includes(j) : q.a === j;
+      return `<button class="opt ${ok && isGood ? "good" : ""}" data-q="${q.id}" data-j="${j}" ${ok ? "disabled" : ""}>${o}</button>`;
+    }).join("")}</div>`;
+    if (multi && !ok) body += `<div><button class="btn" data-multi="${q.id}">Valider ma sélection</button></div>`;
+  }
+  return `<div class="q" id="q-${q.id}"><div class="qt"><span class="num">${i + 1}.</span>${q.q}</div>${body}
+    ${ok ? `<div class="explain">${q.x}</div>` : ""}</div>`;
+}
+
+function findQ(id) { for (const c of CHAPTERS) for (const q of c.questions) if (q.id === id) return q; }
+
+function solve(q, correct) {
+  if (correct) {
+    S.ok[q.id] = true;
+    S.pts[q.id] = S.tried[q.id] ? 0 : (q.pts || 1);
+    save();
+    const idx = CHAPTERS[S.ch].questions.indexOf(q);
+    document.getElementById("q-" + q.id).outerHTML = qHTML(q, idx);
+    document.querySelector("[data-nav='1']").disabled = !chapterDone(S.ch);
+    hint(); renderSteps();
+    if (chapterDone(S.ch)) toast("Étape terminée !");
+  } else {
+    S.tried[q.id] = true; save();
+  }
+}
+
+$ch.addEventListener("click", e => {
+  const t = e.target;
+  const tab = t.closest(".tab");
+  if (tab) {
+    const box = tab.closest(".docs");
+    box.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b === tab));
+    box.querySelector("[data-paper]").innerHTML = DOCS[tab.dataset.doc].html;
+    return;
+  }
+  const opt = t.closest(".opt");
+  if (opt && !opt.disabled) {
+    const q = findQ(opt.dataset.q), j = +opt.dataset.j;
+    if (q.type === "multi") { opt.classList.toggle("sel"); return; }
+    if (j === q.a) solve(q, true);
+    else { opt.classList.remove("bad"); void opt.offsetWidth; opt.classList.add("bad"); opt.disabled = true; solve(q, false); }
+    return;
+  }
+  if (t.dataset.multi) {
+    const q = findQ(t.dataset.multi);
+    const sel = [...document.querySelectorAll(`[data-q="${q.id}"].sel`)].map(b => +b.dataset.j).sort();
+    if (sel.join() === [...q.a].sort().join()) solve(q, true);
+    else { solve(q, false); toast(sel.length !== q.a.length ? `Il faut choisir exactement ${q.a.length} informations.` : "Pas tout à fait. Relis les actes."); }
+    return;
+  }
+  if (t.dataset.num) {
+    const q = findQ(t.dataset.num);
+    const v = parseInt(document.getElementById("in-" + q.id).value, 10);
+    if (v === q.a) solve(q, true);
+    else { solve(q, false); toast("Ce n'est pas ce numéro. Remonte la lignée : père = 2n, mère = 2n + 1."); }
+    return;
+  }
+  if (t.id === "check-tree") return checkTree();
+  if (t.dataset.nav) {
+    const d = +t.dataset.nav;
+    if (d > 0 && S.ch === CHAPTERS.length - 1) { finish(); return; }
+    S.ch = Math.max(0, Math.min(CHAPTERS.length - 1, S.ch + d));
+    S.max = Math.max(S.max, S.ch);
+    save(); render(); scrollTo({ top: 0, behavior: "smooth" });
+  }
+});
+$ch.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.id && e.target.id.startsWith("in-")) document.querySelector(`[data-num="${e.target.id.slice(3)}"]`).click();
+});
+
+/* ------------------------------------------------------------------ arbre */
+function treeHTML() {
+  const done = S.ok.tree;
+  const gens = TREE.map(g => {
+    const entries = Object.entries(g.slots || g.fixed);
+    return `<div class="gen"><div class="gen-label">${g.label}</div><div class="gen-row" style="--n:${entries.length}">${entries.map(([n, name]) => {
+      if (g.fixed) return `<div class="slot fixed"><label>Sosa ${n}</label><span>${name}</span></div>`;
+      const cur = S.tree[n] || "";
+      return `<div class="slot ${done ? "good" : ""}" id="slot-${n}"><label for="sel-${n}">Sosa ${n}</label>
+        <select id="sel-${n}" data-sosa="${n}" ${done ? "disabled" : ""}><option value="">…</option>
+        ${NAMES.map(x => `<option ${x === cur ? "selected" : ""}>${x}</option>`).join("")}</select></div>`;
+    }).join("")}</div></div>`;
+  }).join("");
+  return `${gens}<div class="rule">Rappel : père de <i>n</i> = 2<i>n</i>, mère de <i>n</i> = 2<i>n</i> + 1. Lucienne (5) a donc pour parents 10 et 11.</div>
+    ${done ? `<div class="explain">Bravo, la branche est complète et sourcée. Tu as même repéré que Rose était recensée sous son nom de naissance.</div>`
+           : `<div><button class="btn" id="check-tree">Vérifier mon arbre</button></div>`}`;
+}
+
+$ch.addEventListener("change", e => {
+  if (e.target.dataset.sosa) {
+    S.tree[e.target.dataset.sosa] = e.target.value; save();
+    e.target.closest(".slot").classList.remove("good", "bad");
+  }
+});
+
+function checkTree() {
+  let right = 0;
+  const n = Object.keys(TREE_ANS).length;
+  for (const [sosa, name] of Object.entries(TREE_ANS)) {
+    const good = S.tree[sosa] === name;
+    if (good) right++;
+    const slot = document.getElementById("slot-" + sosa);
+    slot.classList.remove("good", "bad"); slot.classList.add(good ? "good" : "bad");
+  }
+  if (S.pts.tree === undefined) { S.pts.tree = right; }
+  if (right === n) {
+    S.ok.tree = true; save();
+    document.getElementById("tree").innerHTML = treeHTML();
+    document.querySelector("[data-nav='1']").disabled = !chapterDone(S.ch);
+    hint(); toast(`Arbre complet ! ${S.pts.tree} / ${n} du premier coup.`);
+  } else {
+    save(); toast(`${right} / ${n} bien placés. Les cases rouges sont à revoir.`);
+  }
+  renderSteps();
+}
+
+/* ------------------------------------------------------------------ fin */
+function mention(p) {
+  if (p >= .9) return "Très bien, avec les félicitations du jury";
+  if (p >= .75) return "Bien";
+  if (p >= .5) return "Assez bien";
+  return "Passable, mais le jury t'adore quand même";
+}
+
+function diplomaHTML() {
+  const p = total() / MAX;
+  const date = new Date(S.done).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return `<div class="lineage" aria-label="Transmission du médaillon">
+      <span>42 · Jean</span><i>→</i><span>21 · Rose</span><i>→</i><span>10 · Émile</span><i>→</i><span>5 · Lucienne</span><i>→</i><span>2 · Marc</span><i>→</i><span>1 · Hélène</span>
+    </div>
+    <div class="diploma-frame"><div class="diploma">
+      <span class="k">Le jury du Coin Léopard certifie que</span>
+      <div class="who">${CONFIG.prenom}</div>
+      <span>a résolu l'Affaire du médaillon et obtient le</span>
+      <h2>Diplôme de Généalogiste</h2>
+      <span class="mention">mention ${mention(p)}</span>
+      <span>${total()} points sur ${MAX}</span>
+      <div class="sig"><span>Fait à Vienne, le ${date}</span><span class="hand">${CONFIG.signature}</span></div>
+    </div></div>`;
+}
+
+function finish() {
+  if (!S.done) { S.done = Date.now(); save(); }
+  award("genealogie");
+  confetti();
+  render();
+  setTimeout(() => document.querySelector(".diploma-frame").scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+}
+
+document.getElementById("reset").addEventListener("click", e => {
+  const b = e.currentTarget;
+  if (b.dataset.confirm) { S = fresh(); save(); delete b.dataset.confirm; b.textContent = "Rouvrir le dossier à zéro"; render(); return; }
+  b.dataset.confirm = "1"; b.textContent = "Sûre ? Clique encore";
+  setTimeout(() => { delete b.dataset.confirm; b.textContent = "Rouvrir le dossier à zéro"; }, 3000);
+});
+
+render();
+</script>
+</body>
+</html>

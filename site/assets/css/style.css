@@ -1,0 +1,133 @@
+/* Layout: fond léopard plein écran (la DA), contenu posé dessus comme des stickers crème bordés d'encre. */
+:root {
+  --sand: #c8ae8b;      /* fond du pelage */
+  --taupe: #9d866f;     /* ombre des taches */
+  --cocoa: #6b4231;     /* cœur roux des taches */
+  --ink: #1b1412;       /* taches noires, texte */
+  --edge: #1b1412;      /* contours et ombres des stickers */
+  --paper: #fbf4e8;     /* cartes */
+  --paper-2: #f3e6d1;   /* cartes secondaires */
+  --blush: #f5bcc6;     /* accent mignon */
+  --rose: #c4486a;      /* accent fort */
+  --ok: #3f7d4e;
+  --bad: #b83a3a;
+  --veil: rgba(27, 20, 18, .18);
+  --on-rose: #fff7f2;
+
+  --f-display: "Bagel Fat One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --f-body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --f-hand: "Caveat", "Segoe Print", cursive;
+  --f-old: "IM Fell English", Georgia, "Times New Roman", serif;
+
+  --r: 22px;
+  --shadow: 6px 6px 0 var(--edge);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #2a201b; --paper-2: #362922; --ink: #f5e9d8; --taupe: #b9a184;
+    --cocoa: #d79a73; --blush: #6e3442; --rose: #f08aa5; --ok: #7cc48d; --bad: #f08a8a;
+    --veil: rgba(10, 6, 5, .62); --on-rose: #1b1412; --edge: #c8ae8b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #2a201b; --paper-2: #362922; --ink: #f5e9d8; --taupe: #b9a184;
+  --cocoa: #d79a73; --blush: #6e3442; --rose: #f08aa5; --ok: #7cc48d; --bad: #f08a8a;
+  --veil: rgba(10, 6, 5, .62); --on-rose: #1b1412; --edge: #c8ae8b; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+button, a, select { -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--sand);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -2;
+  background: var(--sand) url("../img/leopard.jpg") center / cover no-repeat;
+}
+body::after { content: ""; position: fixed; inset: 0; z-index: -1; background: var(--veil); }
+
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; line-height: 1.1; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: var(--rose); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px dashed var(--rose); outline-offset: 3px; }
+
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 22px; }
+
+.sticker {
+  background: var(--paper);
+  border: 2.5px solid var(--edge);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  min-width: 0;
+}
+
+/* Barre du haut des jeux */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.back {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink);
+  background: var(--paper); border: 2.5px solid var(--edge); border-radius: 999px;
+  padding: 6px 16px 6px 12px; font-weight: 800; box-shadow: 3px 3px 0 var(--edge);
+}
+.back:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--edge); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--paper); border: 2.5px solid var(--edge);
+  border-radius: 999px; padding: 6px 14px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+
+.game-head { display: grid; gap: 6px; }
+.game-head h1 { font-size: clamp(2rem, 6vw, 3.2rem); }
+.game-head .hand { font-family: var(--f-hand); font-size: 1.45rem; color: var(--cocoa); line-height: 1.2; }
+
+.btn {
+  appearance: none; cursor: pointer; border: 2.5px solid var(--edge); border-radius: 999px;
+  background: var(--rose); color: var(--on-rose); font-weight: 800; padding: 10px 20px;
+  box-shadow: 3px 3px 0 var(--edge); transition: transform .08s, box-shadow .08s;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--edge); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--edge); }
+.btn.ghost { background: var(--paper); color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+/* Toast + confettis */
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 140%);
+  background: var(--paper); border: 2.5px solid var(--edge); border-radius: 18px; box-shadow: var(--shadow);
+  padding: 12px 20px; font-weight: 800; z-index: 50; transition: transform .35s cubic-bezier(.2, 1.4, .4, 1);
+  max-width: calc(100vw - 32px); text-align: center;
+}
+.toast.show { transform: translate(-50%, 0); }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+
+/* Fenêtre de fin de partie */
+.overlay {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;
+  background: rgba(27, 20, 18, .45);
+}
+.overlay .sticker { max-width: 420px; width: 100%; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.overlay h2 { font-size: 2rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Plateaux de jeu tactiles */
+.board-zone { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.section-title { color: #fbf4e8; font-size: clamp(1.6rem, 4.5vw, 2.2rem); text-shadow: 3px 3px 0 #1b1412; padding-inline: 4px; }

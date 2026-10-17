@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coloriages doux</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 290px); gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .canvas { background: #ffffff; border: 2.5px solid var(--edge); border-radius: 18px; overflow: hidden; max-width: 620px; width: 100%; margin: 0 auto; }
+  .canvas svg { display: block; width: 100%; height: auto; }
+  .canvas .z { cursor: pointer; stroke: #2a1f1a; stroke-width: 3.5; stroke-linejoin: round; transition: fill .15s; }
+  .canvas .line { fill: none; stroke: #2a1f1a; stroke-width: 3.5; stroke-linecap: round; pointer-events: none; }
+  .canvas .shine { fill: #ffffff; pointer-events: none; }
+  .gallery { display: flex; gap: 8px; flex-wrap: wrap; }
+  .gallery button { border: 2px solid var(--edge); background: var(--paper-2); border-radius: 12px; padding: 6px 12px; font-weight: 800; cursor: pointer; }
+  .gallery button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .gallery button .ok { color: var(--ok); }
+  .side { display: grid; gap: 14px; }
+  .palette { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .sw {
+    aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 2.5px solid var(--edge); cursor: pointer; padding: 0;
+    box-shadow: 2px 2px 0 var(--edge); transition: transform .1s;
+  }
+  .sw[aria-pressed="true"] { transform: scale(1.12); box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--rose); }
+  .current { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+  .current span { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--edge); }
+  .tools { display: grid; gap: 8px; }
+  .progress { height: 12px; border-radius: 999px; background: var(--paper-2); border: 2px solid var(--edge); overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--rose); transition: width .2s; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <span class="pill" id="count">0 / 0 zones</span>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Coloriages doux</h1>
+    <p class="hand">Choisis une couleur, puis touche une zone du dessin. Tes coloriages restent enregistrés.</p>
+    <div class="gallery" id="gallery" role="group" aria-label="Dessins"></div>
+  </section>
+
+  <section class="layout board-zone">
+    <div class="sticker"><div class="canvas" id="canvas"></div></div>
+    <div class="sticker side">
+      <div class="current">Couleur : <span id="cur"></span></div>
+      <div class="palette" id="palette" role="group" aria-label="Palette"></div>
+      <div class="progress" aria-hidden="true"><i id="bar" style="width:0"></i></div>
+      <div class="tools">
+        <button class="btn" id="surprise">Remplissage surprise</button>
+        <button class="btn ghost" id="clear">Tout effacer</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const COLORS = ["#c8ae8b", "#9d866f", "#6b4231", "#1b1412", "#f4e3c8",
+                  "#f5bcc6", "#e98aa0", "#c4486a", "#e8574f", "#f29e5c",
+                  "#f7d070", "#a8d5a2", "#5f9e6e", "#a7d3ec", "#5b8fd1",
+                  "#c8a7e8", "#8e6bbf", "#b9b4ad", "#ffffff", "#ffe9ef"];
+
+  const heart = (cx, cy, s) => `<path class="z" d="M${cx} ${cy + s * .9} C${cx - s * 1.7} ${cy - s * .2} ${cx - s * .65} ${cy - s * 1.35} ${cx} ${cy - s * .35} C${cx + s * .65} ${cy - s * 1.35} ${cx + s * 1.7} ${cy - s * .2} ${cx} ${cy + s * .9} Z"/>`;
+  const flower = (cx, cy, d, r, rc) => [0, 1, 2, 3, 4, 5].map(k => {
+    const a = k * Math.PI / 3;
+    return `<circle class="z" cx="${(cx + Math.cos(a) * d).toFixed(1)}" cy="${(cy + Math.sin(a) * d).toFixed(1)}" r="${r}"/>`;
+  }).join("") + `<circle class="z" cx="${cx}" cy="${cy}" r="${rc}"/>`;
+  const bg = `<rect class="z" x="0" y="0" width="400" height="400"/>`;
+  const sun = (x, y, r) => `<circle class="z" cx="${x}" cy="${y}" r="${r}"/>`;
+
+  const DRAWINGS = [
+    { id: "leopard", name: "Bébé léopard", svg: `${bg}
+      <circle class="z" cx="112" cy="112" r="48"/><circle class="z" cx="112" cy="112" r="26"/>
+      <circle class="z" cx="288" cy="112" r="48"/><circle class="z" cx="288" cy="112" r="26"/>
+      <ellipse class="z" cx="200" cy="215" rx="145" ry="125"/>
+      <ellipse class="z" cx="150" cy="140" rx="17" ry="11" transform="rotate(-20 150 140)"/>
+      <ellipse class="z" cx="200" cy="118" rx="15" ry="10"/>
+      <ellipse class="z" cx="252" cy="140" rx="17" ry="11" transform="rotate(20 252 140)"/>
+      <ellipse class="z" cx="96" cy="205" rx="13" ry="18" transform="rotate(15 96 205)"/>
+      <ellipse class="z" cx="304" cy="205" rx="13" ry="18" transform="rotate(-15 304 205)"/>
+      <ellipse class="z" cx="112" cy="290" rx="14" ry="10"/><ellipse class="z" cx="288" cy="290" rx="14" ry="10"/>
+      <ellipse class="z" cx="148" cy="205" rx="22" ry="27"/><ellipse class="z" cx="252" cy="205" rx="22" ry="27"/>
+      <circle class="shine" cx="156" cy="196" r="7"/><circle class="shine" cx="260" cy="196" r="7"/>
+      <ellipse class="z" cx="200" cy="270" rx="64" ry="46"/>
+      <circle class="z" cx="122" cy="258" r="17"/><circle class="z" cx="278" cy="258" r="17"/>
+      <path class="z" d="M182 247 Q200 238 218 247 Q212 264 200 269 Q188 264 182 247 Z"/>
+      <path class="line" d="M200 269 L200 282 M200 282 Q187 295 174 286 M200 282 Q213 295 226 286"/>
+      <path class="z" d="M200 82 L158 60 L160 106 Z"/><path class="z" d="M200 82 L242 60 L240 106 Z"/><circle class="z" cx="200" cy="83" r="12"/>` },
+    { id: "cupcake", name: "Cupcake", svg: `${bg}
+      ${[0, 1, 2, 3, 4].map(i => `<path class="z" d="M${110 + 36 * i} 232 L${146 + 36 * i} 232 L${161 + 26 * i} 360 L${135 + 26 * i} 360 Z"/>`).join("")}
+      <path class="z" d="M92 238 Q84 190 128 180 Q126 128 184 130 Q202 92 244 118 Q296 118 284 176 Q320 192 308 238 Q200 262 92 238 Z"/>
+      <path class="z" d="M150 150 Q170 112 214 124 Q250 128 248 160 Q200 176 150 150 Z"/>
+      ${[[130, 205, -25], [175, 222, 15], [225, 210, -10], [270, 200, 30], [200, 190, 60], [150, 175, 40], [255, 168, -40]].map(([x, y, r]) =>
+        `<rect class="z" x="${x - 9}" y="${y - 4}" width="18" height="8" rx="4" transform="rotate(${r} ${x} ${y})"/>`).join("")}
+      <path class="line" d="M214 84 Q218 60 242 50"/>
+      <circle class="z" cx="214" cy="104" r="22"/><circle class="shine" cx="206" cy="96" r="6"/>
+      ${heart(60, 70, 22)}${heart(340, 300, 18)}${heart(345, 80, 14)}` },
+    { id: "arbre", name: "Arbre de famille", svg: `${bg}
+      ${sun(62, 62, 34)}
+      <path class="z" d="M0 335 Q200 300 400 335 L400 400 L0 400 Z"/>
+      <path class="z" d="M178 345 L188 200 L212 200 L222 345 Z"/>
+      <circle class="z" cx="118" cy="168" r="56"/><circle class="z" cx="282" cy="168" r="56"/>
+      <circle class="z" cx="150" cy="98" r="52"/><circle class="z" cx="250" cy="98" r="52"/>
+      <circle class="z" cx="200" cy="145" r="72"/>
+      ${heart(128, 160, 13)}${heart(272, 160, 13)}${heart(200, 112, 15)}${heart(160, 92, 11)}${heart(240, 92, 11)}${heart(200, 175, 12)}${heart(105, 195, 10)}${heart(295, 195, 10)}
+      ${flower(70, 350, 11, 8, 7)}${flower(330, 355, 11, 8, 7)}` },
+    { id: "bouquet", name: "Bouquet", svg: `${bg}
+      <path class="line" d="M200 280 Q196 200 200 120 M190 282 Q160 220 142 160 M210 282 Q240 220 262 165"/>
+      <ellipse class="z" cx="168" cy="240" rx="26" ry="11" transform="rotate(35 168 240)"/>
+      <ellipse class="z" cx="234" cy="236" rx="26" ry="11" transform="rotate(-35 234 236)"/>
+      <ellipse class="z" cx="204" cy="200" rx="22" ry="9" transform="rotate(-55 204 200)"/>
+      ${flower(142, 158, 27, 20, 16)}${flower(262, 162, 27, 20, 16)}${flower(200, 112, 30, 22, 18)}
+      <path class="z" d="M150 282 Q138 332 166 372 L234 372 Q262 332 250 282 Z"/>
+      <ellipse class="z" cx="200" cy="282" rx="52" ry="11"/>
+      ${heart(200, 330, 15)}
+      ${heart(60, 70, 16)}${heart(345, 60, 12)}${heart(340, 330, 14)}` },
+    { id: "maison", name: "Maison douce", svg: `${bg}
+      ${sun(335, 62, 32)}
+      <path class="z" d="M48 118 Q46 92 74 95 Q84 70 112 80 Q134 68 146 94 Q172 94 168 118 Z"/>
+      <path class="z" d="M0 340 Q200 318 400 340 L400 400 L0 400 Z"/>
+      <rect class="z" x="248" y="112" width="30" height="62"/>
+      <rect class="z" x="110" y="192" width="180" height="150"/>
+      <path class="z" d="M88 198 L200 104 L312 198 Z"/>
+      ${heart(200, 165, 14)}
+      <path class="z" d="M178 342 L178 292 Q200 262 222 292 L222 342 Z"/>
+      <circle class="shine" cx="212" cy="318" r="4" style="fill:#2a1f1a"/>
+      <rect class="z" x="128" y="222" width="42" height="42" rx="4"/><path class="line" d="M149 222 V264 M128 243 H170"/>
+      <rect class="z" x="230" y="222" width="42" height="42" rx="4"/><path class="line" d="M251 222 V264 M230 243 H272"/>
+      <ellipse class="z" cx="200" cy="356" rx="22" ry="7"/><ellipse class="z" cx="206" cy="374" rx="24" ry="8"/><ellipse class="z" cx="196" cy="392" rx="26" ry="8"/>
+      ${flower(70, 330, 12, 9, 8)}${flower(330, 328, 12, 9, 8)}` },
+    { id: "tasse", name: "Chaton dans une tasse", svg: `${bg}
+      ${heart(150, 62, 14)}${heart(200, 42, 18)}${heart(252, 62, 14)}
+      <ellipse class="z" cx="200" cy="340" rx="135" ry="24"/>
+      <path class="z" d="M138 118 L150 60 L186 104 Z"/><path class="z" d="M262 118 L250 60 L214 104 Z"/>
+      <path class="z" d="M150 108 L156 78 L174 102 Z"/><path class="z" d="M250 108 L244 78 L226 102 Z"/>
+      <circle class="z" cx="200" cy="162" r="70"/>
+      <ellipse class="z" cx="174" cy="160" rx="13" ry="16"/><ellipse class="z" cx="226" cy="160" rx="13" ry="16"/>
+      <circle class="shine" cx="178" cy="154" r="4.5"/><circle class="shine" cx="230" cy="154" r="4.5"/>
+      <path class="z" d="M192 180 Q200 175 208 180 Q204 188 200 190 Q196 188 192 180 Z"/>
+      <circle class="z" cx="150" cy="186" r="11"/><circle class="z" cx="250" cy="186" r="11"/>
+      <path class="z" d="M290 215 Q348 212 342 262 Q336 306 278 298 L282 276 Q318 280 318 260 Q320 236 288 238 Z"/>
+      <path class="z" d="M108 200 L292 200 L272 330 Q200 356 128 330 Z"/>
+      <ellipse class="z" cx="168" cy="202" rx="20" ry="13"/><ellipse class="z" cx="232" cy="202" rx="20" ry="13"/>
+      ${heart(200, 270, 22)}` },
+  ];
+
+  let cur = store.get("coloriage:current", "leopard");
+  if (!DRAWINGS.find(d => d.id === cur)) cur = "leopard";
+  let color = COLORS[5];
+  const canvas = document.getElementById("canvas");
+
+  function fills() { return store.get("coloriage:" + cur, {}); }
+
+  function draw() {
+    const d = DRAWINGS.find(x => x.id === cur);
+    canvas.innerHTML = `<svg viewBox="0 0 400 400" role="img" aria-label="${d.name}">${d.svg}</svg>`;
+    const f = fills();
+    canvas.querySelectorAll(".z").forEach((el, i) => { el.dataset.k = i; el.style.fill = f[i] || "#ffffff"; });
+    progress();
+    renderGallery();
+  }
+
+  function progress() {
+    const zones = [...canvas.querySelectorAll(".z")].slice(1); // le fond ne compte pas
+    const done = zones.filter(z => z.style.fill && !/^(#ffffff|rgb\(255, 255, 255\))$/i.test(z.style.fill)).length;
+    document.getElementById("count").textContent = `${done} / ${zones.length} zones`;
+    document.getElementById("bar").style.width = (100 * done / zones.length) + "%";
+    if (done === zones.length) {
+      const doneSet = store.get("coloriage:done", {});
+      if (!doneSet[cur]) { doneSet[cur] = true; store.set("coloriage:done", doneSet); toast("Dessin terminé, il est magnifique !"); renderGallery(); }
+      award("coloriage");
+    }
+  }
+
+  function renderGallery() {
+    const doneSet = store.get("coloriage:done", {});
+    document.getElementById("gallery").innerHTML = DRAWINGS.map(d =>
+      `<button data-id="${d.id}" aria-pressed="${d.id === cur}">${d.name}${doneSet[d.id] ? ' <span class="ok">✓</span>' : ""}</button>`).join("");
+  }
+
+  function renderPalette() {
+    document.getElementById("palette").innerHTML = COLORS.map(c =>
+      `<button class="sw" style="background:${c}" data-c="${c}" aria-label="Couleur ${c}" aria-pressed="${c === color}"></button>`).join("");
+    document.getElementById("cur").style.background = color;
+  }
+
+  canvas.addEventListener("click", e => {
+    const z = e.target.closest(".z"); if (!z) return;
+    z.style.fill = color;
+    const f = fills(); f[z.dataset.k] = color; store.set("coloriage:" + cur, f);
+    progress();
+  });
+  document.getElementById("palette").addEventListener("click", e => {
+    const b = e.target.closest(".sw"); if (!b) return; color = b.dataset.c; renderPalette();
+  });
+  document.getElementById("gallery").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    cur = b.dataset.id; store.set("coloriage:current", cur); draw();
+  });
+  document.getElementById("surprise").addEventListener("click", () => {
+    const soft = COLORS.filter(c => c !== "#1b1412");
+    const f = {};
+    canvas.querySelectorAll(".z").forEach((z, i) => { const c = i === 0 ? "#ffe9ef" : soft[(Math.random() * soft.length) | 0]; z.style.fill = c; f[i] = c; });
+    store.set("coloriage:" + cur, f); progress();
+  });
+  const clearBtn = document.getElementById("clear");
+  clearBtn.addEventListener("click", () => {
+    if (!clearBtn.dataset.confirm) {
+      clearBtn.dataset.confirm = "1"; clearBtn.textContent = "Sûre ? Touche encore";
+      setTimeout(() => { delete clearBtn.dataset.confirm; clearBtn.textContent = "Tout effacer"; }, 3000);
+      return;
+    }
+    delete clearBtn.dataset.confirm; clearBtn.textContent = "Tout effacer";
+    store.set("coloriage:" + cur, {}); draw();
+  });
+
+  renderPalette();
+  draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Douceurs en folie</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .board {
+    position: relative; width: 100%; max-width: 560px; aspect-ratio: 1; margin: 0 auto; touch-action: none;
+    background: var(--paper-2); border: 2.5px solid var(--edge); border-radius: 18px; overflow: hidden;
+  }
+  .tile {
+    position: absolute; width: 12.5%; height: 12.5%; display: grid; place-items: center; cursor: pointer;
+    font-size: clamp(1.4rem, 6.5vw, 2.6rem); transition: top .24s cubic-bezier(.3, 1.3, .5, 1), left .2s, transform .2s, opacity .2s;
+  }
+  .tile.sel { transform: scale(1.18); filter: drop-shadow(0 0 6px var(--rose)); }
+  .tile.pop { transform: scale(0); opacity: 0; }
+  .tile.hint { animation: wiggle .6s 2; }
+  @keyframes wiggle { 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+  .cellbg { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); pointer-events: none; }
+  .cellbg i:nth-child(odd) { background: color-mix(in srgb, var(--paper) 60%, transparent); }
+  .float { position: absolute; font-weight: 800; color: var(--rose); pointer-events: none; animation: up .8s forwards; font-size: 1.2rem; z-index: 5; }
+  @keyframes up { to { transform: translateY(-40px); opacity: 0; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Score : <b id="score">0</b></span>
+      <span class="pill">Coups : <b id="moves">30</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Douceurs en folie</h1>
+    <p class="hand">Fais glisser une douceur vers sa voisine pour aligner trois pareilles ou plus. Tu as 30 coups. Sticker à 1 200 points.</p>
+    <div class="row"><button class="btn" id="restart">Nouvelle partie</button><button class="btn ghost" id="hintBtn">Un indice</button></div>
+  </section>
+
+  <section class="sticker board-zone">
+    <div class="board" id="board"><div class="cellbg"></div></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const N = 8, TYPES = ["🍓", "🧁", "🍩", "🍬", "🍪", "💗"];
+  const board = document.getElementById("board");
+  board.querySelector(".cellbg").innerHTML = Array.from({ length: 64 }, (_, i) => (((i / 8) | 0) + i) % 2 ? "<i></i>" : "<i style='background:none'></i>").join("");
+  let grid, score, moves, busy, uid = 0, selected = null;
+  const els = new Map();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function rndType(x, y) {
+    let t;
+    do { t = (Math.random() * TYPES.length) | 0; }
+    while ((x >= 2 && grid[y][x - 1]?.t === t && grid[y][x - 2]?.t === t) || (y >= 2 && grid[y - 1]?.[x]?.t === t && grid[y - 2]?.[x]?.t === t));
+    return t;
+  }
+
+  function start() {
+    els.forEach(e => e.remove()); els.clear();
+    grid = Array.from({ length: N }, () => Array(N).fill(null));
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) grid[y][x] = { id: uid++, t: rndType(x, y), from: y - N };
+    score = 0; moves = 30; busy = false; selected = null;
+    if (!hasMove()) return start();
+    render(); hud();
+  }
+
+  function hud() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("moves").textContent = moves;
+    const b = store.get("best:bonbons", null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+
+  function render() {
+    const fresh = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const c = grid[y][x]; if (!c) continue;
+      let el = els.get(c.id);
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "tile"; el.textContent = TYPES[c.t]; el.dataset.id = c.id;
+        el.style.left = x * 12.5 + "%"; el.style.top = (c.from ?? y) * 12.5 + "%";
+        board.append(el); els.set(c.id, el); fresh.push(el);
+      }
+      el.dataset.x = x; el.dataset.y = y;
+      c.from = undefined;
+    }
+    if (fresh.length) void board.offsetWidth;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const c = grid[y][x]; if (!c) continue;
+      const el = els.get(c.id);
+      el.style.left = x * 12.5 + "%"; el.style.top = y * 12.5 + "%";
+      el.classList.toggle("sel", selected && selected.x === x && selected.y === y);
+    }
+  }
+
+  function findMatches() {
+    const hit = new Set();
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const t = grid[y][x]?.t; if (t === undefined) continue;
+      if (x <= N - 3 && grid[y][x + 1]?.t === t && grid[y][x + 2]?.t === t) { let k = x; while (k < N && grid[y][k]?.t === t) hit.add(y * N + k++); }
+      if (y <= N - 3 && grid[y + 1][x]?.t === t && grid[y + 2][x]?.t === t) { let k = y; while (k < N && grid[k][x]?.t === t) hit.add(k++ * N + x); }
+    }
+    return hit;
+  }
+
+  function swapCells(a, b) { const t = grid[a.y][a.x]; grid[a.y][a.x] = grid[b.y][b.x]; grid[b.y][b.x] = t; }
+
+  function findMove() {
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      const a = { x, y }, b = { x: x + dx, y: y + dy };
+      if (b.x >= N || b.y >= N) continue;
+      swapCells(a, b); const ok = findMatches().size > 0; swapCells(a, b);
+      if (ok) return [a, b];
+    }
+    return null;
+  }
+  const hasMove = () => !!findMove();
+
+  async function trySwap(a, b) {
+    if (busy || moves <= 0) return;
+    busy = true; selected = null;
+    swapCells(a, b); render(); await sleep(220);
+    if (!findMatches().size) { swapCells(a, b); render(); await sleep(220); busy = false; return; }
+    moves--; hud();
+    let combo = 1;
+    let m;
+    while ((m = findMatches()).size) {
+      const gain = m.size * 10 * combo + (m.size >= 5 ? 50 : m.size >= 4 ? 20 : 0);
+      score += gain; hud();
+      let sx = 0, sy = 0;
+      m.forEach(k => { const x = k % N, y = (k / N) | 0; sx += x; sy += y; els.get(grid[y][x].id).classList.add("pop"); });
+      floatText(`+${gain}${combo > 1 ? " ×" + combo : ""}`, sx / m.size, sy / m.size);
+      await sleep(230);
+      m.forEach(k => { const x = k % N, y = (k / N) | 0; const c = grid[y][x]; els.get(c.id).remove(); els.delete(c.id); grid[y][x] = null; });
+      for (let x = 0; x < N; x++) {
+        const col = [];
+        for (let y = N - 1; y >= 0; y--) if (grid[y][x]) col.push(grid[y][x]);
+        const missing = N - col.length;
+        for (let y = N - 1, i = 0; y >= 0; y--, i++) {
+          if (i < col.length) grid[y][x] = col[i];
+          else grid[y][x] = { id: uid++, t: (Math.random() * TYPES.length) | 0, from: y - missing };
+        }
+      }
+      render(); await sleep(280);
+      combo++;
+    }
+    if (!hasMove()) { toast("Plus de coup possible, je mélange !"); await sleep(400); reshuffle(); }
+    busy = false;
+    if (moves === 0) end();
+  }
+
+  function reshuffle() {
+    do {
+      const all = grid.flat();
+      shuffle(all);
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) grid[y][x] = all[y * N + x];
+    } while (findMatches().size || !hasMove());
+    render();
+  }
+
+  function floatText(txt, x, y) {
+    const f = document.createElement("div");
+    f.className = "float"; f.textContent = txt;
+    f.style.left = `calc(${x * 12.5}% + 4px)`; f.style.top = `${y * 12.5}%`;
+    board.append(f); setTimeout(() => f.remove(), 800);
+  }
+
+  function end() {
+    const r = best("bonbons", score); hud();
+    if (score >= 1200) award("bonbons");
+    showEnd({ title: r.isNew ? "Nouveau record !" : "Plus de coups !", text: `Score : <b>${score}</b> points.`, again: start });
+  }
+
+  // Glisser ou toucher deux cases voisines
+  let down = null;
+  const cellOf = e => {
+    const r = board.getBoundingClientRect();
+    return { x: Math.floor((e.clientX - r.left) / r.width * N), y: Math.floor((e.clientY - r.top) / r.height * N) };
+  };
+  board.addEventListener("pointerdown", e => { if (busy) return; down = { ...cellOf(e), cx: e.clientX, cy: e.clientY, moved: false }; });
+  board.addEventListener("pointermove", e => {
+    if (!down || down.moved) return;
+    const dx = e.clientX - down.cx, dy = e.clientY - down.cy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+    down.moved = true;
+    const b = Math.abs(dx) > Math.abs(dy) ? { x: down.x + Math.sign(dx), y: down.y } : { x: down.x, y: down.y + Math.sign(dy) };
+    if (b.x >= 0 && b.x < N && b.y >= 0 && b.y < N) trySwap({ x: down.x, y: down.y }, b);
+  });
+  board.addEventListener("pointerup", () => {
+    if (!down || down.moved || busy) { down = null; return; }
+    const c = { x: down.x, y: down.y }; down = null;
+    if (selected && Math.abs(selected.x - c.x) + Math.abs(selected.y - c.y) === 1) { trySwap(selected, c); return; }
+    selected = selected && selected.x === c.x && selected.y === c.y ? null : c;
+    render();
+  });
+
+  document.getElementById("restart").addEventListener("click", start);
+  document.getElementById("hintBtn").addEventListener("click", () => {
+    const mv = findMove(); if (!mv || busy) return;
+    mv.forEach(p => { const el = els.get(grid[p.y][p.x].id); el.classList.remove("hint"); void el.offsetWidth; el.classList.add("hint"); });
+  });
+  start();
+</script>
+</body>
+</html>

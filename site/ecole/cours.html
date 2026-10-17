@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L'École de généalogie</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .menu { display: grid; gap: 8px; }
+  .menu h2 { font-size: 1.3rem; margin-bottom: 4px; }
+  .lesson-btn {
+    display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left;
+    border: 2px solid var(--edge); border-radius: 14px; background: var(--paper-2); padding: 8px 10px; cursor: pointer; font-weight: 700;
+  }
+  .lesson-btn .e { font-size: 1.5rem; }
+  .lesson-btn .ok { color: var(--ok); font-weight: 800; }
+  .lesson-btn[aria-current="page"] { background: var(--blush); box-shadow: 3px 3px 0 var(--edge); }
+  .prog { height: 12px; border-radius: 999px; background: var(--paper-2); border: 2px solid var(--edge); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--rose); }
+  @media (max-width: 880px) {
+    .menu-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+    .lesson-btn { flex: 0 0 auto; grid-template-columns: auto auto; }
+    .lesson-btn .t { display: none; }
+  }
+
+  .lesson { display: grid; gap: 20px; }
+  .lesson header { display: grid; gap: 6px; }
+  .lesson .eyebrow { font-weight: 800; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; color: var(--rose); }
+  .lesson h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); }
+  .lesson .lead { font-family: var(--f-hand); font-size: 1.5rem; color: var(--cocoa); line-height: 1.25; }
+  .part { display: grid; gap: 8px; max-width: 70ch; }
+  .part h3 { font-family: var(--f-body); font-weight: 800; font-size: 1.15rem; }
+  .part ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+  .part table { border-collapse: collapse; font-size: .95rem; }
+  .part th, .part td { border: 1px solid var(--taupe); padding: 5px 9px; text-align: left; }
+  .part th { background: var(--paper-2); }
+  .tscroll { overflow-x: auto; }
+  .musthave { background: var(--blush); border: 2.5px solid var(--edge); border-radius: 18px; padding: 14px 18px; display: grid; gap: 6px; max-width: 70ch; }
+  .musthave h3 { font-family: var(--f-display); font-weight: 400; font-size: 1.35rem; }
+  .musthave ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-weight: 700; }
+  .ex { font-family: var(--f-old); background: var(--paper-2); border-left: 4px solid var(--cocoa); padding: 8px 12px; border-radius: 0 10px 10px 0; }
+
+  .qs { display: grid; gap: 14px; }
+  .qs h2 { font-size: 1.5rem; }
+  .q { display: grid; gap: 10px; padding: 14px; border-radius: 16px; background: var(--paper-2); }
+  .q .qt { font-weight: 800; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+  .opt { text-align: left; border: 2px solid var(--edge); border-radius: 12px; background: var(--paper); padding: 9px 12px; cursor: pointer; font-weight: 600; }
+  .opt.good { background: var(--ok); color: var(--paper); border-color: var(--ok); }
+  .opt.bad { background: var(--bad); color: var(--paper); border-color: var(--bad); }
+  .opt:disabled { cursor: default; }
+  .explain { border-left: 4px solid var(--rose); padding-left: 12px; font-size: .95rem; }
+  .nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <a class="back" href="outils.html">🧰 Les outils</a>
+  </div>
+
+  <section class="layout">
+    <aside class="sticker menu">
+      <h2>L'École de généalogie</h2>
+      <div class="prog" aria-hidden="true"><i id="prog" style="width:0"></i></div>
+      <p id="progtxt" style="font-size:.9rem;font-weight:700;color:var(--cocoa)"></p>
+      <div class="menu-list" id="menu"></div>
+    </aside>
+    <article class="sticker lesson" id="lesson"></article>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+const L = [
+  {
+    id: "demarrer", e: "🌱", t: "Bien démarrer son arbre", min: 5,
+    lead: "Du connu vers l'inconnu : on part de soi et on remonte, une génération après l'autre.",
+    parts: [
+      ["Partir de soi", `<p>On commence par soi-même, puis ses parents, ses grands-parents. On note ce qu'on sait avec certitude : noms, prénoms, dates et lieux de naissance, de mariage, de décès, métiers.</p>`],
+      ["Interroger la famille tant qu'il est temps", `<p>Les anciens sont la première source. On leur demande les noms, les lieux, les métiers, les surnoms, les déménagements, les anecdotes. On fait annoter les photos au dos, avant que plus personne ne sache qui est dessus.</p>`],
+      ["Fouiller les papiers de famille", `<ul><li>le <b>livret de famille</b> (il existe depuis 1877)</li><li>les actes, faire-part, images de communion, cartes postales</li><li>les livrets militaires, diplômes, contrats, lettres</li></ul>`],
+      ["Choisir un outil", `<p>Un logiciel (Heredis, Généatique, ou Gramps qui est gratuit) ou un site (Geneanet, Filae, FamilySearch). Tous savent échanger un arbre grâce au format <b>GEDCOM</b>.</p>`],
+    ],
+    must: ["Toujours du connu vers l'inconnu", "Noter la source de chaque information dès le premier jour", "Faire annoter les photos par les anciens"],
+    quiz: [
+      { q: "Par où commencer un arbre ?", o: ["Par l'ancêtre le plus ancien connu", "Par soi-même et ses parents", "Par un site d'arbres en ligne", "Par le nom de famille le plus rare"], a: 1, x: "On part toujours du connu (soi) pour aller vers l'inconnu." },
+      { q: "Le livret de famille existe depuis…", o: ["1792", "1877", "1945", "1968"], a: 1, x: "Il a été créé en 1877, notamment après la destruction de l'état civil parisien en 1871." },
+      { q: "Le format GEDCOM sert à…", o: ["imprimer un arbre en éventail", "échanger un arbre entre logiciels", "lire le latin", "dater une photo"], a: 1, x: "C'est le format universel d'échange entre logiciels et sites de généalogie." },
+    ],
+  },
+  {
+    id: "etatcivil", e: "🏛️", t: "L'état civil", min: 6,
+    lead: "Depuis la Révolution, chaque commune enregistre naissances, mariages et décès. C'est la colonne vertébrale de toute recherche.",
+    parts: [
+      ["Une invention de 1792", `<p>La loi du <b>20 septembre 1792</b> retire la tenue des registres aux curés et la confie aux communes. Le maire devient officier d'état civil.</p>`],
+      ["Deux exemplaires", `<p>Chaque registre est tenu en double : un exemplaire reste à la mairie, l'autre part au greffe du tribunal puis aux <b>Archives départementales</b>. La plupart les ont numérisés et les mettent en ligne gratuitement.</p>`],
+      ["Les tables décennales", `<p>Pour chaque commune, un index alphabétique des actes sur <b>dix ans</b>. Au lieu de feuilleter dix registres, on cherche le nom dans la table, on obtient la date, puis on va droit à l'acte.</p>`],
+      ["Qui peut voir quoi ?", `<div class="tscroll"><table><tr><th>Acte</th><th>Librement consultable</th></tr><tr><td>Naissance</td><td>après 75 ans</td></tr><tr><td>Mariage</td><td>après 75 ans</td></tr><tr><td>Décès</td><td>immédiatement</td></tr></table></div><p>Avant ce délai, on peut quand même obtenir une copie intégrale de son propre acte ou de celui d'un ascendant ou descendant direct.</p>`],
+      ["Les mentions marginales", `<p>Dans la marge d'un acte de naissance, on ajoute les événements qui suivent : le <b>mariage</b> (depuis 1897), le <b>décès</b> (depuis 1945), un divorce… Une seule page peut résumer toute une vie.</p>`],
+    ],
+    must: ["Tables décennales d'abord, registres ensuite", "Naissances et mariages : 75 ans. Décès : tout de suite", "Toujours lire la marge"],
+    quiz: [
+      { q: "En quelle année l'état civil passe-t-il aux communes ?", o: ["1539", "1667", "1792", "1804"], a: 2, x: "Loi du 20 septembre 1792." },
+      { q: "Un acte de mariage de 1960 sera librement consultable à partir de…", o: ["2010", "2035", "2060", "jamais"], a: 1, x: "1960 + 75 ans = 2035." },
+      { q: "Une table décennale, c'est…", o: ["un registre de dix pages", "un index alphabétique des actes d'une commune sur dix ans", "la liste des dix plus vieux actes", "un recensement"], a: 1, x: "C'est l'outil qui fait gagner le plus de temps." },
+    ],
+  },
+  {
+    id: "paroisse", e: "⛪", t: "Avant 1792 : les registres paroissiaux", min: 6,
+    lead: "Sous l'Ancien Régime, ce sont les curés qui tiennent les registres : baptêmes, mariages et sépultures.",
+    parts: [
+      ["Les grandes dates", `<ul><li><b>1539</b>, ordonnance de Villers-Cotterêts : les baptêmes doivent être enregistrés</li><li><b>1579</b>, ordonnance de Blois : mariages et sépultures aussi</li><li><b>1667</b>, Code Louis : les registres sont tenus en double</li></ul><p>En pratique, beaucoup de registres ne commencent qu'au XVIIᵉ siècle.</p>`],
+      ["Ce qu'on y trouve", `<p>On parle de registres <b>BMS</b> : Baptêmes, Mariages, Sépultures. Le baptême a lieu le jour même ou le lendemain de la naissance. Avant un mariage, on publie les <b>bans</b> trois dimanches de suite. À la sépulture, l'âge est souvent approximatif.</p>`],
+      ["Les parrains et marraines", `<p>Ils sont très souvent de la famille : grands-parents, oncles, tantes. Un parrain qui porte le même nom que la mère, c'est peut-être un oncle maternel. C'est un indice précieux pour remonter.</p>`],
+      ["Et les protestants ?", `<p>Ils avaient leurs propres registres, souvent clandestins après 1685. L'<b>édit de tolérance de 1787</b> leur permet enfin de faire enregistrer leurs naissances et mariages.</p>`],
+    ],
+    must: ["BMS = Baptêmes, Mariages, Sépultures", "Parrains et marraines sont des indices de famille", "Les relevés des cercles généalogiques font gagner un temps fou"],
+    quiz: [
+      { q: "BMS signifie…", o: ["Baptêmes, Mariages, Sépultures", "Bans, Mariages, Successions", "Baptêmes, Messes, Signatures", "Bureau des Mariages et Successions"], a: 0, x: "Les trois types d'actes des registres paroissiaux." },
+      { q: "L'ordonnance de Villers-Cotterêts date de…", o: ["1515", "1539", "1598", "1667"], a: 1, x: "1539, sous François Iᵉʳ." },
+      { q: "Avant un mariage, le curé publie…", o: ["les tables", "les bans", "les mentions", "les matricules"], a: 1, x: "Les bans annoncent le mariage pour que d'éventuels empêchements soient signalés." },
+    ],
+  },
+  {
+    id: "sosa", e: "🔢", t: "La numérotation Sosa", min: 5,
+    lead: "Un numéro par ancêtre, et tout l'arbre devient logique.",
+    parts: [
+      ["La règle", `<p>La personne étudiée porte le n° 1. Pour toute personne n° <i>n</i> : son <b>père = 2n</b>, sa <b>mère = 2n + 1</b>. Pour retrouver l'enfant : <b>n ÷ 2</b>, sans la virgule.</p><p class="ex">Lucienne (5) → père 10, mère 11. Enfant de 43 → 21.</p>`],
+      ["Les générations", `<div class="tscroll"><table><tr><th>Génération</th><th>Numéros</th><th>Nom savant</th></tr><tr><td>1</td><td>1</td><td>toi</td></tr><tr><td>2</td><td>2 – 3</td><td>parents</td></tr><tr><td>3</td><td>4 – 7</td><td>aïeuls (grands-parents)</td></tr><tr><td>4</td><td>8 – 15</td><td>bisaïeuls</td></tr><tr><td>5</td><td>16 – 31</td><td>trisaïeuls</td></tr><tr><td>6</td><td>32 – 63</td><td>quadrisaïeuls</td></tr></table></div><p>Chaque génération double : à la 10ᵉ, on a 512 ancêtres théoriques.</p>`],
+      ["L'astuce binaire", `<p>Écris le numéro en binaire et oublie le premier 1 : chaque 0 veut dire « père », chaque 1 « mère ».</p><p class="ex">42 = 101010 → 0 1 0 1 0 → père, mère, père, mère, père.</p>`],
+      ["L'implexe", `<p>Quand des cousins se marient, un même ancêtre apparaît plusieurs fois dans l'arbre. On parle d'<b>implexe</b> : on a moins d'ancêtres réels que d'ancêtres théoriques.</p>`],
+      ["D'où ça vient ?", `<p>Imaginée par Jerónimo de Sosa en 1676, popularisée par Stephan Kekulé von Stradonitz en 1898.</p>`],
+    ],
+    must: ["Père = 2n, mère = 2n + 1", "Hommes pairs, femmes impaires (sauf le n° 1)", "Génération g : de 2^(g−1) à 2^g − 1"],
+    quiz: [
+      { q: "L'enfant du Sosa 87 porte le numéro…", o: ["43", "44", "86", "174"], a: 0, x: "87 ÷ 2 = 43,5 → 43." },
+      { q: "Le Sosa 100 appartient à la génération…", o: ["5", "6", "7", "10"], a: 2, x: "La 7ᵉ génération va de 64 à 127." },
+      { q: "Combien d'ancêtres théoriques à la 10ᵉ génération ?", o: ["100", "256", "512", "1024"], a: 2, x: "2⁹ = 512." },
+    ],
+  },
+  {
+    id: "republicain", e: "🌾", t: "Le calendrier républicain", min: 5,
+    lead: "Entre 1792 et 1805, les actes sont datés en floréal, thermidor ou brumaire. Pas de panique.",
+    parts: [
+      ["Le principe", `<p>L'an I commence le <b>22 septembre 1792</b>. L'année compte 12 mois de <b>30 jours</b>, découpés en trois décades, plus 5 jours complémentaires (6 les années sextiles : III, VII et XI). Le calendrier est abandonné le <b>1ᵉʳ janvier 1806</b>.</p>`],
+      ["Les mois, saison par saison", `<div class="tscroll"><table><tr><th>Saison</th><th>Mois</th><th>Terminaison</th></tr><tr><td>Automne</td><td>vendémiaire, brumaire, frimaire</td><td>-aire</td></tr><tr><td>Hiver</td><td>nivôse, pluviôse, ventôse</td><td>-ôse</td></tr><tr><td>Printemps</td><td>germinal, floréal, prairial</td><td>-al</td></tr><tr><td>Été</td><td>messidor, thermidor, fructidor</td><td>-idor</td></tr></table></div>`],
+      ["Deux dates célèbres", `<p class="ex">9 thermidor an II = 27 juillet 1794 (chute de Robespierre)<br>18 brumaire an VIII = 9 novembre 1799 (coup d'État de Bonaparte)</p>`],
+      ["Le bon réflexe", `<p>Ne jamais convertir de tête : les débuts d'année varient d'un jour. Utilise le convertisseur de la page <a href="outils.html">Outils</a>.</p>`],
+    ],
+    must: ["An I = 22 septembre 1792", "-aire automne, -ôse hiver, -al printemps, -idor été", "Toujours vérifier avec un convertisseur"],
+    quiz: [
+      { q: "Germinal, floréal, prairial : quelle saison ?", o: ["Automne", "Hiver", "Printemps", "Été"], a: 2, x: "Terminaison en -al : printemps." },
+      { q: "Combien de jours dans un mois républicain ?", o: ["28", "30", "31", "10"], a: 1, x: "Douze mois de 30 jours, plus les jours complémentaires." },
+      { q: "Le calendrier républicain est abandonné le…", o: ["14 juillet 1795", "18 brumaire an VIII", "1ᵉʳ janvier 1806", "1ᵉʳ janvier 1815"], a: 2, x: "Napoléon rétablit le calendrier grégorien au 1ᵉʳ janvier 1806." },
+    ],
+  },
+  {
+    id: "paleo", e: "🪶", t: "Lire les vieux actes", min: 6,
+    lead: "La paléographie, c'est l'art de déchiffrer les écritures anciennes. Ça s'apprend avec quelques astuces.",
+    parts: [
+      ["Les pièges d'écriture", `<ul><li>le <b>s long</b> (ſ) ressemble à un f</li><li>u et v, i et j sont souvent interchangeables</li><li>l'orthographe des noms n'est pas fixée : Martin, Martain, Marttin peuvent être la même famille</li></ul>`],
+      ["Les abréviations à connaître", `<div class="tscroll"><table><tr><th>Écrit</th><th>Se lit</th></tr><tr><td>7bre, 8bre, 9bre, Xbre</td><td>septembre, octobre, novembre, décembre</td></tr><tr><td>Sr / Me</td><td>sieur / maître</td></tr><tr><td>Dlle / Vve</td><td>demoiselle / veuve</td></tr><tr><td>feu, feue</td><td>décédé, décédée</td></tr><tr><td>led., lad., dud. lieu</td><td>ledit, ladite, dudit lieu</td></tr></table></div>`],
+      ["La méthode", `<p>Transcrire mot à mot, lire à voix haute, comparer une lettre douteuse avec un mot connu écrit par le même curé. Les formules se répètent d'un acte à l'autre : une fois qu'on en a lu dix, on lit le onzième beaucoup plus vite.</p>`],
+      ["Les métiers d'autrefois", `<ul><li><b>laboureur</b> : paysan qui possède un attelage, plutôt aisé</li><li><b>journalier</b> ou <b>brassier</b> : loue ses bras à la journée</li><li><b>ménager</b> : petit propriétaire (surtout dans le Midi)</li><li><b>tisserand, sabotier, meunier, maréchal-ferrant</b>…</li></ul>`],
+    ],
+    must: ["7bre = septembre, 8bre = octobre, 9bre = novembre, Xbre = décembre", "Un nom mal orthographié n'est pas forcément une erreur", "Comparer avec les autres actes du même scribe"],
+    quiz: [
+      { q: "« 9bre » se lit…", o: ["neuvième", "septembre", "novembre", "neuf bras"], a: 2, x: "Novem = neuf en latin : novembre était le 9ᵉ mois de l'ancien calendrier romain." },
+      { q: "« Vve » signifie…", o: ["vivante", "veuve", "votre", "vingtième"], a: 1, x: "Vve = veuve, très fréquent dans les actes de mariage." },
+      { q: "Un laboureur, sous l'Ancien Régime, c'est…", o: ["un ouvrier agricole sans terre", "un paysan qui possède un attelage", "un moine", "un notaire de campagne"], a: 1, x: "Il possède sa charrue et ses bêtes : c'est souvent un notable du village." },
+    ],
+  },
+  {
+    id: "sources", e: "🗂️", t: "Les autres sources", min: 6,
+    lead: "L'état civil donne le squelette. Les autres archives racontent la vie.",
+    parts: [
+      ["Les recensements", `<p>À partir de 1836, en principe tous les cinq ans, les communes listent chaque foyer : noms, âges, métiers, liens. C'est une photo de la maisonnée.</p>`],
+      ["Les registres matricules militaires", `<p>Depuis la loi de 1872, chaque homme a une fiche à ses 20 ans, classée par <b>classe</b> (l'année de ses 20 ans) et par bureau de recrutement. On y trouve sa taille, la couleur de ses yeux, ses adresses successives, ses campagnes et ses blessures.</p>`],
+      ["Mémoire des hommes", `<p>La base du ministère des Armées recense les soldats « morts pour la France », notamment en 1914-1918.</p>`],
+      ["Les archives notariales", `<p>Contrats de mariage, testaments, inventaires après décès, ventes : une mine d'or, surtout avant 1792, quand l'état civil est plus pauvre.</p>`],
+      ["Et encore…", `<ul><li>le <b>cadastre napoléonien</b> (début du XIXᵉ siècle) : qui possédait quelle parcelle</li><li>les <b>tables de successions</b> de l'Enregistrement</li><li>la <b>presse ancienne</b> sur Gallica ou RetroNews</li></ul>`],
+    ],
+    must: ["Recensement = photo de famille tous les cinq ans", "Fiche matricule : chercher par classe (année des 20 ans)", "Notaire = mine d'or avant la Révolution"],
+    quiz: [
+      { q: "Les fiches matricules sont classées par…", o: ["ordre alphabétique national", "classe, c'est-à-dire l'année des 20 ans", "date de décès", "grade"], a: 1, x: "Un homme né en 1890 est de la classe 1910." },
+      { q: "Pour trouver un contrat de mariage, on cherche dans…", o: ["les archives notariales", "les tables décennales", "les recensements", "Mémoire des hommes"], a: 0, x: "Le contrat se signe chez le notaire, avant le mariage." },
+      { q: "Les listes de recensement donnent…", o: ["les causes de décès", "la composition de chaque foyer", "les contrats de mariage", "les numéros Sosa"], a: 1, x: "Noms, âges, métiers et place dans le ménage." },
+    ],
+  },
+  {
+    id: "parente", e: "👨‍👩‍👧", t: "Le vocabulaire de la parenté", min: 4,
+    lead: "Cousin issu de germain, oncle à la mode de Bretagne, demi-frère utérin : enfin clair.",
+    parts: [
+      ["Les cousins", `<ul><li><b>cousins germains</b> : mêmes grands-parents</li><li><b>cousins issus de germains</b> : mêmes arrière-grands-parents</li><li><b>oncle à la mode de Bretagne</b> : le cousin germain d'un de tes parents</li><li><b>neveu à la mode de Bretagne</b> : l'enfant de ton cousin germain</li></ul>`],
+      ["Frères et sœurs", `<ul><li><b>germains</b> : mêmes père et mère</li><li><b>consanguins</b> : même père seulement</li><li><b>utérins</b> : même mère seulement</li></ul>`],
+      ["Les mots savants", `<ul><li><b>ascendance</b> : tes ancêtres. <b>Descendance</b> : la suite</li><li><b>collatéraux</b> : frères, sœurs, oncles, tantes, cousins</li><li><b>lignée agnatique</b> : de père en père</li><li><b>fratrie</b> : l'ensemble des frères et sœurs</li></ul>`],
+    ],
+    must: ["Germains = mêmes grands-parents", "Consanguin = même père, utérin = même mère", "Oncle à la mode de Bretagne = cousin germain d'un parent"],
+    quiz: [
+      { q: "Un demi-frère utérin a…", o: ["le même père", "la même mère", "les mêmes grands-parents", "le même parrain"], a: 1, x: "Utérin vient d'utérus : même mère." },
+      { q: "Le cousin germain de ta mère est ton…", o: ["cousin issu de germain", "oncle à la mode de Bretagne", "grand-oncle", "neveu"], a: 1, x: "C'est l'expression consacrée." },
+      { q: "Deux cousins issus de germains partagent…", o: ["les mêmes parents", "les mêmes grands-parents", "les mêmes arrière-grands-parents", "le même nom"], a: 2, x: "Leurs parents sont cousins germains." },
+    ],
+  },
+  {
+    id: "metier", e: "🧭", t: "Les règles d'or et le métier", min: 5,
+    lead: "Ce qui distingue une généalogiste professionnelle d'une collectionneuse de noms.",
+    parts: [
+      ["Sourcer, toujours", `<p>Chaque information doit renvoyer à sa source : commune, type d'acte, date, cote ou numéro de vue. Sans source, ce n'est qu'une hypothèse.</p>`],
+      ["Recouper", `<p>Un acte de naissance, un recensement et une fiche matricule qui disent la même chose, c'est solide. Une seule source peut contenir une erreur de l'officier ou du déclarant.</p>`],
+      ["Se méfier des homonymes", `<p>Deux Jean MARTIN nés la même année dans le même village, ça arrive. On vérifie les parents, le conjoint, le métier, la signature.</p>`],
+      ["Respecter les vivants", `<p>On ne publie pas les informations d'une personne vivante sans son accord.</p>`],
+      ["Le métier", `<ul><li><b>généalogiste familial</b> : retrouve l'histoire d'une famille pour des particuliers</li><li><b>généalogiste successoral</b> : retrouve les héritiers d'une succession, souvent à la demande d'un notaire</li></ul><p>Il existe des diplômes universitaires de généalogie, par exemple à l'Université de Nîmes.</p>`],
+    ],
+    must: ["Pas de source, pas d'info", "Toujours recouper", "Rien sur les vivants sans leur accord"],
+    quiz: [
+      { q: "Un généalogiste successoral…", o: ["écrit des romans familiaux", "retrouve les héritiers d'une succession", "dessine des blasons", "tient l'état civil"], a: 1, x: "Il travaille souvent pour les notaires." },
+      { q: "Deux Jean MARTIN nés en 1828 à Vienne. Que fais-tu ?", o: ["Je prends le premier trouvé", "Je compare parents, conjoint, métier", "Je fusionne les deux", "J'abandonne"], a: 1, x: "Ce sont les détails qui départagent des homonymes." },
+      { q: "Peut-on publier la date de naissance d'une cousine vivante sans lui demander ?", o: ["Oui, c'est public", "Non", "Oui si elle a plus de 18 ans", "Oui sur un site payant"], a: 1, x: "On protège toujours la vie privée des vivants." },
+    ],
+  },
+];
+
+const S = Object.assign({ done: {}, seen: {} }, store.get("ecole", {}));
+const save = () => store.set("ecole", S);
+let cur = 0;
+
+function fromHash() {
+  const i = L.findIndex(l => "#" + l.id === location.hash);
+  return i >= 0 ? i : Math.max(0, L.findIndex(l => !S.done[l.id]));
+}
+
+function menu() {
+  const n = L.filter(l => S.done[l.id]).length;
+  document.getElementById("prog").style.width = (100 * n / L.length) + "%";
+  document.getElementById("progtxt").textContent = `${n} leçon${n > 1 ? "s" : ""} validée${n > 1 ? "s" : ""} sur ${L.length}`;
+  document.getElementById("menu").innerHTML = L.map((l, i) =>
+    `<button class="lesson-btn" data-i="${i}" ${i === cur ? 'aria-current="page"' : ""}>
+      <span class="e" aria-hidden="true">${l.e}</span><span class="t">${l.t}</span>${S.done[l.id] ? '<span class="ok">✓</span>' : "<span></span>"}</button>`).join("");
+}
+
+function qHTML(q, k, solved) {
+  return `<div class="q" id="q${k}"><div class="qt">${k + 1}. ${q.q}</div>
+    <div class="opts">${q.o.map((o, j) => `<button class="opt ${solved && j === q.a ? "good" : ""}" data-k="${k}" data-j="${j}" ${solved ? "disabled" : ""}>${o}</button>`).join("")}</div>
+    ${solved ? `<div class="explain">${q.x}</div>` : ""}</div>`;
+}
+
+function show(i) {
+  cur = i;
+  const l = L[i];
+  const done = S.done[l.id];
+  const solved = done ? l.quiz.map(() => true) : (S.seen[l.id] || l.quiz.map(() => false));
+  document.getElementById("lesson").innerHTML = `
+    <header><span class="eyebrow">Leçon ${i + 1} sur ${L.length} · ${l.min} min</span><h1>${l.t}</h1><p class="lead">${l.lead}</p></header>
+    ${l.parts.map(([h, b]) => `<section class="part"><h3>${h}</h3>${b}</section>`).join("")}
+    <aside class="musthave"><h3>Les must-have</h3><ul>${l.must.map(m => `<li>${m}</li>`).join("")}</ul></aside>
+    <section class="qs"><h2>Petit quiz</h2>${l.quiz.map((q, k) => qHTML(q, k, solved[k])).join("")}</section>
+    <div class="nav">
+      <button class="btn ghost" data-go="${i - 1}" ${i === 0 ? "hidden" : ""}>← Leçon précédente</button>
+      <button class="btn" data-go="${i + 1}" ${i === L.length - 1 ? "hidden" : ""}>Leçon suivante →</button>
+    </div>`;
+  if (location.hash !== "#" + l.id) history.replaceState(null, "", "#" + l.id);
+  menu();
+}
+
+document.getElementById("menu").addEventListener("click", e => {
+  const b = e.target.closest(".lesson-btn"); if (!b) return;
+  show(+b.dataset.i); document.getElementById("lesson").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.getElementById("lesson").addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if (go) { show(+go.dataset.go); scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const opt = e.target.closest(".opt"); if (!opt || opt.disabled) return;
+  const l = L[cur], k = +opt.dataset.k, q = l.quiz[k];
+  if (+opt.dataset.j !== q.a) { opt.classList.add("bad"); opt.disabled = true; return; }
+  const seen = S.seen[l.id] || l.quiz.map(() => false);
+  seen[k] = true; S.seen[l.id] = seen;
+  document.getElementById("q" + k).outerHTML = qHTML(q, k, true);
+  if (seen.every(Boolean)) {
+    S.done[l.id] = true;
+    toast(`Leçon « ${l.t} » validée !`);
+    if (L.every(x => S.done[x.id])) award("ecole");
+  }
+  save(); menu();
+});
+
+addEventListener("hashchange", () => show(fromHash()));
+show(fromHash());
+</script>
+</body>
+</html>

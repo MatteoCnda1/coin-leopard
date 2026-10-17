@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La boîte à outils</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .tools { grid-template-columns: minmax(0, 1fr); } }
+  .tool { display: grid; gap: 14px; }
+  .tool h2 { font-size: 1.6rem; }
+  .tool .sub { color: var(--cocoa); font-weight: 600; }
+  .fields { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+  .fields label { display: grid; gap: 4px; font-size: .8rem; font-weight: 800; color: var(--cocoa); }
+  .fields select, .fields input {
+    border: 2px solid var(--edge); border-radius: 12px; padding: 9px 10px; background: var(--paper); font-weight: 700; min-width: 0;
+  }
+  .result { background: var(--blush); border: 2.5px solid var(--edge); border-radius: 16px; padding: 12px 16px; font-weight: 700; display: grid; gap: 4px; min-height: 3em; }
+  .result big { font-family: var(--f-display); font-size: 1.5rem; font-weight: 400; }
+  .result small { font-weight: 600; color: var(--cocoa); }
+  .wide { grid-column: 1 / -1; }
+  .path { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .path span { background: var(--paper); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 10px; font-size: .88rem; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <a class="back" href="cours.html">🎓 Les cours</a>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>La boîte à outils</h1>
+    <p class="hand">Les petits calculateurs que toute généalogiste garde sous la main. Ils marchent aussi hors ligne.</p>
+  </section>
+
+  <section class="tools">
+    <div class="sticker tool">
+      <h2>Républicain → grégorien</h2>
+      <p class="sub">Pour les actes datés entre l'an I et l'an XIV.</p>
+      <div class="fields">
+        <label>Jour<select id="rj"></select></label>
+        <label>Mois<select id="rm"></select></label>
+        <label>Année<select id="ry"></select></label>
+      </div>
+      <div class="result" id="rres" aria-live="polite"></div>
+    </div>
+
+    <div class="sticker tool">
+      <h2>Grégorien → républicain</h2>
+      <p class="sub">Entre le 22 septembre 1792 et le 31 décembre 1805.</p>
+      <div class="fields"><label>Date<input type="date" id="gd" min="1792-09-22" max="1805-12-31" value="1799-11-09"></label></div>
+      <div class="result" id="gres" aria-live="polite"></div>
+    </div>
+
+    <div class="sticker tool">
+      <h2>Calculateur Sosa</h2>
+      <p class="sub">Tape un numéro : génération, sexe, parents, enfant et chemin depuis le n° 1.</p>
+      <div class="fields"><label>Numéro Sosa<input type="number" id="sn" min="1" max="1000000" value="42" inputmode="numeric"></label></div>
+      <div class="result" id="sres" aria-live="polite"></div>
+    </div>
+
+    <div class="sticker tool">
+      <h2>Estimer une naissance</h2>
+      <p class="sub">« Âgé de 23 ans » le jour d'un acte : entre quelles dates est-il né ?</p>
+      <div class="fields">
+        <label>Âge déclaré<input type="number" id="aa" min="0" max="120" value="23" inputmode="numeric"></label>
+        <label>Date de l'acte<input type="date" id="ad" value="1852-04-24"></label>
+      </div>
+      <div class="result" id="ares" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const MONTHS = ["vendémiaire", "brumaire", "frimaire", "nivôse", "pluviôse", "ventôse", "germinal", "floréal", "prairial", "messidor", "thermidor", "fructidor", "jours complémentaires"];
+  const DECADE = ["primidi", "duodi", "tridi", "quartidi", "quintidi", "sextidi", "septidi", "octidi", "nonidi", "décadi"];
+  const COMPL = ["jour de la vertu", "jour du génie", "jour du travail", "jour de l'opinion", "jour des récompenses", "jour de la révolution"];
+  const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV"];
+  // 1er vendémiaire de chaque année (années sextiles : III, VII, XI)
+  const START = { 1: [1792, 9, 22], 2: [1793, 9, 22], 3: [1794, 9, 22], 4: [1795, 9, 23], 5: [1796, 9, 22], 6: [1797, 9, 22], 7: [1798, 9, 22],
+                  8: [1799, 9, 23], 9: [1800, 9, 23], 10: [1801, 9, 23], 11: [1802, 9, 23], 12: [1803, 9, 24], 13: [1804, 9, 23], 14: [1805, 9, 23] };
+  const DAY = 86400000;
+  const utc = ([y, m, d]) => Date.UTC(y, m - 1, d);
+  const yearLen = y => y === 14 ? 100 : (y === 3 || y === 7 || y === 11 ? 366 : 365);
+  const fmt = t => new Date(t).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+  function rep2greg(d, m, y) {
+    const doy = (m - 1) * 30 + (d - 1);
+    if (doy >= yearLen(y)) return null;
+    return utc(START[y]) + doy * DAY;
+  }
+  function greg2rep(t) {
+    for (let y = 14; y >= 1; y--) {
+      const s = utc(START[y]);
+      if (t >= s) {
+        const doy = Math.round((t - s) / DAY);
+        if (doy >= yearLen(y)) return null;
+        return { y, m: Math.floor(doy / 30) + 1, d: doy % 30 + 1 };
+      }
+    }
+    return null;
+  }
+  const repLabel = ({ d, m, y }) => m === 13
+    ? `${COMPL[d - 1]} (jour complémentaire n° ${d}) an ${ROMAN[y]}`
+    : `${d === 1 ? "1ᵉʳ" : d} ${MONTHS[m - 1]} an ${ROMAN[y]}`;
+
+  // Remplissage des listes
+  const $ = id => document.getElementById(id);
+  $("rj").innerHTML = Array.from({ length: 30 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+  $("rm").innerHTML = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+  $("ry").innerHTML = ROMAN.slice(1).map((r, i) => `<option value="${i + 1}">an ${r}</option>`).join("");
+  $("rj").value = 18; $("rm").value = 2; $("ry").value = 8;
+
+  function updRep() {
+    const d = +$("rj").value, m = +$("rm").value, y = +$("ry").value;
+    const t = rep2greg(d, m, y);
+    if (t === null) {
+      $("rres").innerHTML = m === 13 ? `L'an ${ROMAN[y]} n'a que ${yearLen(y) - 360} jours complémentaires.` : `Le calendrier républicain s'arrête le 10 nivôse an XIV.`;
+      return;
+    }
+    $("rres").innerHTML = `<big>${fmt(t)}</big><small>${m === 13 ? "" : DECADE[(d - 1) % 10] + " de la " + ["1ʳᵉ", "2ᵉ", "3ᵉ"][Math.floor((d - 1) / 10)] + " décade"}</small>`;
+  }
+  function updGreg() {
+    const v = $("gd").value; if (!v) return;
+    const [y, m, d] = v.split("-").map(Number);
+    const r = greg2rep(utc([y, m, d]));
+    $("gres").innerHTML = r ? `<big>${repLabel(r)}</big><small>${r.m === 13 ? "" : DECADE[(r.d - 1) % 10]}</small>` : "Cette date est en dehors du calendrier républicain (22/09/1792 – 31/12/1805).";
+  }
+
+  const GEN_NAMES = { 1: "toi", 2: "parent", 3: "aïeul (grand-parent)", 4: "bisaïeul (arrière-grand-parent)", 5: "trisaïeul", 6: "quadrisaïeul" };
+  function updSosa() {
+    const n = Math.floor(+$("sn").value);
+    if (!n || n < 1) { $("sres").textContent = "Tape un numéro à partir de 1."; return; }
+    const g = Math.floor(Math.log2(n)) + 1;
+    const bits = n.toString(2).slice(1);
+    const steps = [...bits].map(b => b === "0" ? "père" : "mère");
+    const sex = n === 1 ? "la personne de départ" : n % 2 ? "une femme" : "un homme";
+    const nameG = GEN_NAMES[g] || `ancêtre de la ${g}ᵉ génération (${g - 2} fois « arrière »)`;
+    $("sres").innerHTML = `<big>Génération ${g} · ${sex}</big>
+      <small>${nameG}${n > 1 ? ` · enfant : n° ${Math.floor(n / 2)}` : ""} · père : n° ${2 * n} · mère : n° ${2 * n + 1}</small>
+      ${n > 1 ? `<div class="path"><span>1</span>${steps.map((s, i) => `→ <span>${s} · ${parseInt("1" + bits.slice(0, i + 1), 2)}</span>`).join(" ")}</div>
+      <small>En binaire : ${n.toString(2)} (on oublie le premier 1, puis 0 = père, 1 = mère)</small>` : ""}`;
+  }
+
+  function updAge() {
+    const a = Math.floor(+$("aa").value), v = $("ad").value;
+    if (!v || isNaN(a)) return;
+    const [y, m, d] = v.split("-").map(Number);
+    const latest = Date.UTC(y - a, m - 1, d);
+    const earliest = Date.UTC(y - a - 1, m - 1, d) + DAY;
+    const f = t => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    $("ares").innerHTML = `<big>Né entre le ${f(earliest)} et le ${f(latest)}</big>
+      <small>Note-le « ca ${y - a} » dans ton arbre, et cherche d'abord dans les tables de ${y - a - 1} et ${y - a}. Les âges déclarés sont parfois approximatifs, surtout avant 1850.</small>`;
+  }
+
+  ["rj", "rm", "ry"].forEach(id => $(id).addEventListener("change", updRep));
+  $("gd").addEventListener("input", updGreg);
+  $("sn").addEventListener("input", updSosa);
+  $("aa").addEventListener("input", updAge); $("ad").addEventListener("input", updAge);
+  updRep(); updGreg(); updSosa(); updAge();
+</script>
+</body>
+</html>

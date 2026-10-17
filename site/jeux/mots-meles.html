@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mots mêlés des archives</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .ws {
+    display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; touch-action: none; user-select: none;
+    -webkit-user-select: none; max-width: 520px; width: 100%; margin: 0 auto;
+  }
+  .ws div {
+    aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; font-weight: 800; border-radius: 8px;
+    font-size: clamp(.8rem, 3.2vw, 1.15rem); background: var(--paper-2); cursor: pointer; transition: background .1s;
+  }
+  .ws div.sel { background: var(--ink); color: var(--paper); }
+  .ws div.found { background: var(--blush); }
+  .words { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+  .words li { display: grid; gap: 0; padding: 8px 12px; border-radius: 12px; background: var(--paper-2); }
+  .words b { letter-spacing: .08em; }
+  .words small { color: var(--cocoa); font-weight: 600; }
+  .words li.ok { background: var(--blush); }
+  .words li.ok b { text-decoration: line-through 3px var(--rose); }
+  @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Trouvés : <b id="count">0 / 12</b></span>
+      <span class="pill">Temps : <b id="time">0:00</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Mots mêlés des archives</h1>
+    <p class="hand">Glisse sur les lettres (ou touche la première puis la dernière). Les mots vont dans tous les sens.</p>
+    <div class="row"><button class="btn" id="restart">Nouvelle grille</button></div>
+  </section>
+
+  <section class="layout">
+    <div class="sticker"><div class="ws" id="ws" aria-label="Grille de lettres"></div></div>
+    <div class="sticker"><ul class="words" id="words"></ul></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const WORDS = [
+    ["ARCHIVES", "là où dorment les registres"],
+    ["ANCETRE", "quelqu'un dont on descend"],
+    ["AIEULE", "une grand-mère, en plus joli"],
+    ["LIGNEE", "la suite des descendants"],
+    ["ACTE", "de naissance, mariage ou décès"],
+    ["PAROISSE", "avant 1792, c'est elle qui tient les registres"],
+    ["SOSA", "la numérotation des ancêtres"],
+    ["BAPTEME", "souvent le lendemain de la naissance"],
+    ["COUSIN", "germain, issu de germain…"],
+    ["ARBRE", "ce que tu fais pousser"],
+    ["NOTAIRE", "contrats de mariage et testaments"],
+    ["CADASTRE", "le plan des terres de la famille"],
+  ];
+  const N = 12, DIRS = [[1, 0], [0, 1], [1, 1], [1, -1], [-1, 0], [0, -1], [-1, -1], [-1, 1]];
+  const ws = document.getElementById("ws");
+  let grid, placed, found, t0, timer, startCell = null, anchor = null, dragging = false;
+
+  function build() {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      grid = Array(N * N).fill(""); placed = [];
+      let ok = true;
+      for (const [w] of [...WORDS].sort((a, b) => b[0].length - a[0].length)) {
+        let done = false;
+        for (let t = 0; t < 300 && !done; t++) {
+          const [dx, dy] = DIRS[(Math.random() * (Math.random() < .6 ? 4 : 8)) | 0];
+          const x0 = (Math.random() * N) | 0, y0 = (Math.random() * N) | 0;
+          const x1 = x0 + dx * (w.length - 1), y1 = y0 + dy * (w.length - 1);
+          if (x1 < 0 || x1 >= N || y1 < 0 || y1 >= N) continue;
+          const cells = [...w].map((_, i) => (y0 + dy * i) * N + x0 + dx * i);
+          if (cells.some((c, i) => grid[c] && grid[c] !== w[i])) continue;
+          cells.forEach((c, i) => grid[c] = w[i]);
+          placed.push({ w, cells }); done = true;
+        }
+        if (!done) { ok = false; break; }
+      }
+      if (ok) break;
+    }
+    const fill = "AEEEIILLNNOORRSSTTUUCDMPABG";
+    grid = grid.map(c => c || fill[(Math.random() * fill.length) | 0]);
+  }
+
+  function start() {
+    build(); found = new Set(); anchor = null;
+    clearInterval(timer); t0 = Date.now();
+    timer = setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      document.getElementById("time").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    }, 500);
+    ws.innerHTML = grid.map((c, i) => `<div data-i="${i}">${c}</div>`).join("");
+    renderWords();
+  }
+
+  function renderWords() {
+    document.getElementById("words").innerHTML = WORDS.map(([w, h]) =>
+      `<li class="${found.has(w) ? "ok" : ""}"><b>${w}</b><small>${h}</small></li>`).join("");
+    document.getElementById("count").textContent = `${found.size} / ${WORDS.length}`;
+  }
+
+  function line(a, b) {
+    const ax = a % N, ay = (a / N) | 0, bx = b % N, by = (b / N) | 0;
+    const dx = Math.sign(bx - ax), dy = Math.sign(by - ay);
+    const len = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+    if (!(ax === bx || ay === by || Math.abs(bx - ax) === Math.abs(by - ay))) return [a];
+    return Array.from({ length: len + 1 }, (_, i) => (ay + dy * i) * N + ax + dx * i);
+  }
+
+  function highlight(cells) {
+    ws.querySelectorAll(".sel").forEach(d => d.classList.remove("sel"));
+    cells.forEach(i => ws.children[i].classList.add("sel"));
+  }
+
+  function check(cells) {
+    const key = cells.join(",");
+    const hit = placed.find(p => !found.has(p.w) && (p.cells.join(",") === key || [...p.cells].reverse().join(",") === key));
+    highlight([]);
+    if (!hit) return false;
+    found.add(hit.w);
+    hit.cells.forEach(i => ws.children[i].classList.add("found"));
+    renderWords();
+    toast(`${hit.w} trouvé !`);
+    if (found.size === WORDS.length) {
+      clearInterval(timer);
+      const secs = Math.floor((Date.now() - t0) / 1000);
+      award("motsmeles");
+      confetti();
+      setTimeout(() => showEnd({ title: "Grille terminée !", text: `Les 12 mots en ${Math.floor(secs / 60)} min ${secs % 60} s. Les archives n'ont plus de secret pour toi.`, againLabel: "Nouvelle grille", again: start }), 500);
+    }
+    return true;
+  }
+
+  const cellAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.parentElement === ws ? +el.dataset.i : null; };
+  let current = null;
+  ws.addEventListener("pointerdown", e => {
+    const c = cellAt(e); if (c === null) return;
+    e.preventDefault();
+    dragging = true; startCell = c; current = c;
+    highlight(anchor !== null ? line(anchor, c) : [c]);
+  });
+  ws.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const c = cellAt(e); if (c === null || c === current) return;
+    current = c; highlight(line(startCell, c));
+  });
+  addEventListener("pointerup", () => {
+    if (!dragging) return;
+    dragging = false;
+    if (current !== startCell) { anchor = null; check(line(startCell, current)); return; }
+    // simple toucher : premier puis dernier
+    if (anchor === null) { anchor = startCell; highlight([anchor]); }
+    else { const a = anchor; anchor = null; if (a !== startCell) check(line(a, startCell)); else highlight([]); }
+  });
+
+  document.getElementById("restart").addEventListener("click", start);
+  start();
+</script>
+</body>
+</html>

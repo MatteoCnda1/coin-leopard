@@ -1,0 +1,7 @@
+services:
+  coin-leopard:
+    build: .
+    container_name: coin-leopard
+    ports:
+      - "8080:80"
+    restart: unless-stopped

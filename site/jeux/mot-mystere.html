@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mot mystère</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .cats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cats .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .hearts { text-align: center; font-size: clamp(1.4rem, 5vw, 2rem); letter-spacing: .1em; }
+  .hint { text-align: center; font-family: var(--f-hand); font-size: 1.6rem; color: var(--cocoa); line-height: 1.2; }
+  .word { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 18px 0; }
+  .word span {
+    width: clamp(28px, 7vw, 46px); height: clamp(38px, 9vw, 58px); border-bottom: 4px solid var(--edge); display: grid; place-items: center;
+    font-family: var(--f-display); font-size: clamp(1.3rem, 5vw, 2.2rem); color: var(--rose);
+  }
+  .word span.gap { border: 0; width: 14px; }
+  .word span.miss { color: var(--taupe); }
+  .kb { display: grid; gap: 8px; max-width: 640px; margin: 0 auto; }
+  .kb div { display: flex; justify-content: center; gap: 6px; }
+  .kb button {
+    flex: 1 1 0; max-width: 54px; min-width: 0; aspect-ratio: .9; border: 2px solid var(--edge); border-radius: 10px; background: var(--paper);
+    font-weight: 800; font-size: clamp(.95rem, 3.6vw, 1.3rem); cursor: pointer; box-shadow: 2px 2px 0 var(--edge); padding: 0;
+  }
+  .kb button.good { background: var(--ok); color: var(--paper); border-color: var(--ok); }
+  .kb button.bad { background: var(--paper-2); color: var(--taupe); box-shadow: none; }
+  .kb button:disabled { cursor: default; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <span class="pill">Mots trouvés : <b id="found">0</b></span>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Mot mystère</h1>
+    <p class="hand">Devine le mot lettre par lettre. Chaque erreur te coûte un cœur. Sticker au cinquième mot trouvé.</p>
+    <div class="cats" role="group" aria-label="Thème">
+      <button class="btn ghost" data-cat="genea">Généalogie</button>
+      <button class="btn ghost" data-cat="doux">Tout doux</button>
+      <button class="btn ghost" data-cat="mix">Mélange</button>
+    </div>
+  </section>
+
+  <section class="sticker board-zone">
+    <div class="hearts" id="hearts" aria-label="Vies restantes"></div>
+    <p class="hint" id="hint"></p>
+    <div class="word" id="word" aria-live="polite"></div>
+    <div class="kb" id="kb"></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const WORDS = {
+    genea: [
+      ["ARCHIVES", "Là où dorment les vieux registres"], ["PATRONYME", "Le nom de famille transmis par le père"],
+      ["BISAIEUL", "Un arrière-grand-père, en langage d'expert"], ["TRISAIEULE", "Une arrière-arrière-grand-mère"],
+      ["IMPLEXE", "Quand un même ancêtre apparaît plusieurs fois dans l'arbre"], ["RECENSEMENT", "Une photo de la maison tous les cinq ans"],
+      ["NOTAIRE", "Il rédige contrats de mariage et testaments"], ["MATRICULE", "La fiche militaire d'un conscrit"],
+      ["PAROISSE", "Avant 1792, c'est elle qui tient les registres"], ["SEPULTURE", "Le S de BMS"],
+      ["MARRAINE", "Elle tient le bébé au baptême, avec le parrain"], ["COLLATERAUX", "Frères, sœurs, oncles, cousins"],
+      ["FRATRIE", "Tous les frères et sœurs"], ["CADASTRE", "Le plan des terres de la commune"],
+      ["DESCENDANCE", "Tous les enfants, petits-enfants…"], ["PALEOGRAPHIE", "L'art de lire les écritures anciennes"],
+      ["BRUMAIRE", "Mois républicain du coup d'État de Bonaparte"], ["TABLES DECENNALES", "Index des actes sur dix ans"],
+      ["ETAT CIVIL", "Naissances, mariages et décès depuis 1792"], ["GENEALOGISTE", "Ton futur métier"],
+    ],
+    doux: [
+      ["LEOPARD", "Le roi des taches"], ["CALIN", "Ça se donne et ça se reçoit"], ["GUIMAUVE", "Toute douce et toute rose"],
+      ["CHOCOLAT CHAUD", "Avec un plaid, c'est parfait"], ["PANTOUFLES", "Pour les pieds froids"], ["CROISSANT", "Le dimanche matin"],
+      ["FRAMBOISE", "Petit fruit rouge"], ["ARC EN CIEL", "Après la pluie"], ["PAPILLON", "Il était chenille"],
+      ["BOUGIE", "Elle sent bon la vanille"], ["DOUDOU", "Le meilleur ami des petits"], ["CERISE", "Sur le gâteau"],
+      ["PLAID", "Couverture du canapé"], ["NUAGE", "Doux comme du coton"], ["CHATON", "Petit félin qui ronronne"],
+      ["BISOU", "Petit mais efficace"], ["CUPCAKE", "Petit gâteau avec du glaçage"], ["TOURNESOL", "Il suit le soleil"],
+    ],
+  };
+  const ROWS = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
+  const LIVES = 7;
+  let cat = store.get("motmystere:cat", "mix"), word, hint, guessed, errors, over;
+
+  function pick() {
+    const pool = cat === "mix" ? [...WORDS.genea, ...WORDS.doux] : WORDS[cat];
+    const last = store.get("motmystere:last", "");
+    let w; do { w = pool[(Math.random() * pool.length) | 0]; } while (w[0] === last && pool.length > 1);
+    store.set("motmystere:last", w[0]);
+    return w;
+  }
+
+  function start() {
+    [word, hint] = pick(); guessed = new Set(); errors = 0; over = false;
+    document.querySelectorAll("[data-cat]").forEach(b => b.setAttribute("aria-pressed", b.dataset.cat === cat));
+    document.getElementById("hint").textContent = hint;
+    document.getElementById("found").textContent = store.get("motmystere:found", 0);
+    document.getElementById("kb").innerHTML = ROWS.map(r => `<div>${[...r].map(l => `<button data-l="${l}">${l}</button>`).join("")}</div>`).join("");
+    render();
+  }
+
+  function render(reveal = false) {
+    document.getElementById("word").innerHTML = [...word].map(c =>
+      c === " " ? `<span class="gap"></span>` :
+      guessed.has(c) ? `<span>${c}</span>` : reveal ? `<span class="miss">${c}</span>` : `<span></span>`).join("");
+    document.getElementById("hearts").textContent = "💗".repeat(LIVES - errors) + "🤍".repeat(errors);
+  }
+
+  function guess(l) {
+    if (over || guessed.has(l)) return;
+    guessed.add(l);
+    const btn = document.querySelector(`[data-l="${l}"]`);
+    btn.disabled = true;
+    if (word.includes(l)) btn.classList.add("good"); else { btn.classList.add("bad"); errors++; }
+    render();
+    if ([...word].every(c => c === " " || guessed.has(c))) {
+      over = true;
+      const n = store.get("motmystere:found", 0) + 1;
+      store.set("motmystere:found", n);
+      document.getElementById("found").textContent = n;
+      if (n >= 5) award("motmystere");
+      confetti();
+      setTimeout(() => showEnd({ title: "Trouvé !", text: `C'était bien <b>${word}</b>.`, againLabel: "Mot suivant", again: start }), 600);
+    } else if (errors >= LIVES) {
+      over = true; render(true);
+      setTimeout(() => showEnd({ title: "Plus de cœurs…", text: `Le mot était <b>${word}</b>.`, againLabel: "Un autre mot", again: start }), 900);
+    }
+  }
+
+  document.getElementById("kb").addEventListener("click", e => { const b = e.target.closest("[data-l]"); if (b) guess(b.dataset.l); });
+  addEventListener("keydown", e => { const l = e.key.toUpperCase(); if (/^[A-Z]$/.test(l) && !document.querySelector(".overlay")) guess(l); });
+  document.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { cat = b.dataset.cat; store.set("motmystere:cat", cat); start(); }));
+  start();
+</script>
+</body>
+</html>

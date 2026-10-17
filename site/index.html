@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Coin Léopard</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/fonts.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .hero { display: grid; gap: 10px; padding: 28px 26px; position: relative; overflow: hidden; }
+  .hero h1 { font-size: clamp(2.6rem, 9vw, 5.2rem); letter-spacing: -.01em; }
+  .hero h1 span { color: var(--rose); }
+  .hero .hand { font-family: var(--f-hand); font-size: clamp(1.4rem, 3.6vw, 1.9rem); color: var(--cocoa); line-height: 1.2; }
+  .hero .paw { position: absolute; right: -10px; bottom: -26px; font-size: 7rem; opacity: .14; transform: rotate(-18deg); pointer-events: none; }
+
+  .album { display: grid; gap: 12px; }
+  .album-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .album h2 { font-size: 1.5rem; }
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 12px; }
+  .slot {
+    width: 100%; aspect-ratio: 1; max-width: 72px; border-radius: 50%; border: 2.5px dashed var(--taupe);
+    display: grid; place-items: center; font-size: 1.9rem; background: var(--paper-2); filter: grayscale(1); opacity: .45;
+  }
+  .slot.got { border-style: solid; border-color: var(--edge); background: var(--blush); filter: none; opacity: 1; box-shadow: 3px 3px 0 var(--edge); }
+  .slot-label { font-size: .72rem; text-align: center; font-weight: 700; line-height: 1.2; }
+  .slot-cell { display: grid; gap: 6px; justify-items: center; align-content: start; min-width: 0; }
+
+  .cat { display: grid; gap: 14px; }
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 20px; }
+  .game {
+    display: grid; grid-template-rows: auto 1fr auto; gap: 8px; text-decoration: none; color: var(--ink); padding: 18px;
+    transition: transform .15s;
+  }
+  .game:nth-child(3n+1) { transform: rotate(-.7deg); }
+  .game:nth-child(3n+2) { transform: rotate(.6deg); }
+  .game:hover, .game:focus-visible { transform: rotate(0) translate(-2px, -3px); }
+  .game .art { font-size: 2.6rem; line-height: 1; }
+  .game h3 { font-size: 1.4rem; }
+  .game p { color: var(--cocoa); font-weight: 600; font-size: .95rem; }
+  .game .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 800; font-size: .85rem; flex-wrap: wrap; }
+  .game .go { background: var(--rose); color: var(--on-rose); border: 2px solid var(--edge); border-radius: 999px; padding: 3px 12px; }
+  .game.star { background: var(--paper-2); }
+  .games.genea { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+  .tag { display: inline-block; font-family: var(--f-hand); font-size: 1.3rem; color: var(--rose); transform: rotate(-3deg); }
+
+  .cookie { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+  .cookie button {
+    font-size: 4rem; background: var(--blush); border: 2.5px solid var(--edge); border-radius: 50%;
+    width: 110px; height: 110px; cursor: pointer; box-shadow: 4px 4px 0 var(--edge); transition: transform .15s;
+  }
+  .cookie button.crack { animation: crack .5s; }
+  @keyframes crack { 30% { transform: rotate(-18deg) scale(1.15); } 60% { transform: rotate(14deg) scale(.95); } }
+  .cookie h2 { font-size: 1.5rem; }
+  .cookie .msg { font-family: var(--f-hand); font-size: 1.7rem; line-height: 1.25; color: var(--cocoa); min-height: 2.5em; }
+
+  .install { display: grid; gap: 8px; }
+  .install h2 { font-size: 1.4rem; }
+  .install ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-weight: 600; }
+  .backup { display: grid; gap: 10px; }
+  .backup h2 { font-size: 1.4rem; }
+  .backup textarea { width: 100%; min-height: 80px; border: 2px solid var(--edge); border-radius: 12px; padding: 10px; background: var(--paper-2); font: .8rem/1.4 ui-monospace, monospace; color: var(--ink); }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+
+  .footnote { text-align: center; font-family: var(--f-hand); font-size: 1.4rem; color: #fbf4e8; text-shadow: 0 1px 0 #1b1412, 0 0 8px #1b1412; }
+
+  @media (max-width: 700px) {
+    .two { grid-template-columns: minmax(0, 1fr); }
+    .cookie { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="sticker hero">
+    <h1>Le Coin <span>Léopard</span></h1>
+    <p class="hand" id="dedicace">Pour toi, avec tout mon amour</p>
+    <p>Des jeux, des cours de généalogie et un album de stickers à compléter. Tout fonctionne même sans internet.</p>
+    <div class="paw" aria-hidden="true">🐾</div>
+  </header>
+
+  <section class="sticker album" aria-labelledby="album-t">
+    <div class="album-head">
+      <h2 id="album-t">Ton album de stickers</h2>
+      <span class="pill" id="album-count">0</span>
+    </div>
+    <div class="slots" id="slots"></div>
+  </section>
+
+  <section class="cat" aria-labelledby="c-genea">
+    <h2 class="section-title" id="c-genea">Le coin généalogie</h2>
+    <div class="games genea">
+      <a class="sticker game star" href="jeux/genealogie.html">
+        <div class="art" aria-hidden="true">📜</div>
+        <div><span class="tag">ton futur métier</span><h3>L'Affaire du médaillon</h3>
+          <p>Un vrai cas pratique : actes, recensement, registre en latin, calendrier républicain et numéros Sosa. À la clé, ton diplôme.</p></div>
+        <div class="foot"><span data-st="genealogie"></span><span class="go">Ouvrir le dossier</span></div>
+      </a>
+      <a class="sticker game star" href="ecole/cours.html">
+        <div class="art" aria-hidden="true">🎓</div>
+        <div><span class="tag">les must-have</span><h3>L'École de généalogie</h3>
+          <p>Neuf petites leçons : état civil, registres paroissiaux, Sosa, paléographie, sources, vocabulaire et métier. Un quiz par leçon.</p></div>
+        <div class="foot"><span data-st="ecole"></span><span class="go">Aller en cours</span></div>
+      </a>
+      <a class="sticker game" href="ecole/outils.html">
+        <div class="art" aria-hidden="true">🧰</div>
+        <div><h3>La boîte à outils</h3><p>Convertisseur du calendrier républicain, calculateur Sosa, estimation d'une date de naissance.</p></div>
+        <div class="foot"><span>Toujours sous la main</span><span class="go">Ouvrir</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat" aria-labelledby="c-tete">
+    <h2 class="section-title" id="c-tete">Jeux de réflexion</h2>
+    <div class="games" id="g-tete"></div>
+  </section>
+
+  <section class="cat" aria-labelledby="c-adresse">
+    <h2 class="section-title" id="c-adresse">Jeux d'adresse</h2>
+    <div class="games" id="g-adresse"></div>
+  </section>
+
+  <section class="cat" aria-labelledby="c-crea">
+    <h2 class="section-title" id="c-crea">Pour se détendre</h2>
+    <div class="games" id="g-crea"></div>
+  </section>
+
+  <section class="sticker cookie" aria-labelledby="cookie-t">
+    <button id="cookie-btn" type="button" aria-label="Ouvrir un biscuit">🥠</button>
+    <div style="display:grid;gap:6px;min-width:0">
+      <h2 id="cookie-t">Le biscuit à petits mots</h2>
+      <p class="msg" id="cookie-msg" aria-live="polite">Touche le biscuit pour lire un petit mot.</p>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="sticker install" id="install" aria-labelledby="inst-t">
+      <h2 id="inst-t">L'installer sur ton iPad</h2>
+      <ol>
+        <li>Ouvre cette page dans <b>Safari</b>.</li>
+        <li>Touche le bouton <b>Partager</b> (le carré avec la flèche).</li>
+        <li>Choisis <b>Sur l'écran d'accueil</b>, puis <b>Ajouter</b>.</li>
+        <li>Ouvre le Coin Léopard depuis sa nouvelle icône : il marche même sans internet.</li>
+      </ol>
+      <p id="offline-state" style="font-size:.9rem;color:var(--cocoa);font-weight:700"></p>
+    </section>
+
+    <section class="sticker backup" aria-labelledby="bk-t">
+      <h2 id="bk-t">Ta sauvegarde</h2>
+      <p style="font-size:.95rem">Ta progression reste sur cet appareil. Pour la mettre à l'abri ou la déplacer, copie ce code et garde-le dans tes notes.</p>
+      <div class="row">
+        <button class="btn" id="bk-copy">Copier ma sauvegarde</button>
+        <button class="btn ghost" id="bk-restore">Restaurer</button>
+      </div>
+      <textarea id="bk-text" aria-label="Code de sauvegarde" placeholder="Colle ici un code de sauvegarde pour le restaurer"></textarea>
+    </section>
+  </div>
+
+  <p class="footnote" id="sign"></p>
+</main>
+
+<script src="assets/js/common.js"></script>
+<script>
+  const GAMES = {
+    "g-tete": [
+      ["sudoku", "jeux/sudoku.html", "🧠", "Sudoku du léopard", "Trois niveaux, mode crayon, partie sauvegardée."],
+      ["motsmeles", "jeux/mots-meles.html", "🔎", "Mots mêlés des archives", "Douze mots de généalogiste cachés dans la grille."],
+      ["motmystere", "jeux/mot-mystere.html", "🔤", "Mot mystère", "Devine le mot avant de perdre tes cœurs."],
+      ["leo2048", "jeux/2048.html", "👑", "2048 Léopard", "Fusionne les pattes jusqu'au léopard couronné."],
+      ["taquin", "jeux/taquin.html", "🧩", "Taquin léopard", "Fais glisser les pièces pour reformer l'image."],
+      ["memory", "jeux/memory.html", "🐆", "Memory des bébés", "Retrouve les paires de petits animaux."],
+      ["morpion", "jeux/morpion.html", "❌", "Morpion des pattes", "Toi contre Léo le léopard."],
+    ],
+    "g-adresse": [
+      ["bonbons", "jeux/bonbons.html", "🧁", "Douceurs en folie", "Aligne trois douceurs pareilles, en 30 coups."],
+      ["tape", "jeux/tape-leopard.html", "🐾", "Coucou les bébés", "Touche les bébés léopards, pas le serpent."],
+      ["coeurs", "jeux/coeurs.html", "💗", "Pluie de câlins", "Attrape les cœurs, évite les nuages."],
+      ["simon", "jeux/simon.html", "🎵", "Simon des pattes", "Répète la suite de pattes qui s'allument."],
+    ],
+    "g-crea": [
+      ["coloriage", "jeux/coloriage.html", "🎨", "Coloriages doux", "Six dessins à colorier d'une simple touche."],
+    ],
+  };
+
+  document.getElementById("dedicace").textContent = `Pour ${CONFIG.prenom}, avec tout mon amour`;
+  document.getElementById("sign").textContent = `— ${CONFIG.signature} 🐾`;
+
+  for (const [id, list] of Object.entries(GAMES)) {
+    document.getElementById(id).innerHTML = list.map(([st, href, art, t, d]) => `
+      <a class="sticker game" href="${href}">
+        <div class="art" aria-hidden="true">${art}</div>
+        <div><h3>${t}</h3><p>${d}</p></div>
+        <div class="foot"><span data-st="${st}"></span><span class="go">Jouer</span></div>
+      </a>`).join("");
+  }
+
+  function renderAlbum() {
+    const got = store.get("stickers", {});
+    const ids = Object.keys(STICKERS);
+    document.getElementById("slots").innerHTML = ids.map(id => `
+      <div class="slot-cell">
+        <div class="slot ${got[id] ? "got" : ""}" aria-hidden="true">${STICKERS[id].art}</div>
+        <div class="slot-label">${got[id] ? STICKERS[id].label : "?"}</div>
+      </div>`).join("");
+    document.getElementById("album-count").textContent = `${ids.filter(i => got[i]).length} / ${ids.length}`;
+    document.querySelectorAll("[data-st]").forEach(el => {
+      el.textContent = got[el.dataset.st] ? `${STICKERS[el.dataset.st].art} Sticker gagné` : "Sticker à gagner";
+    });
+  }
+  renderAlbum();
+
+  let lastMsg = -1;
+  document.getElementById("cookie-btn").addEventListener("click", e => {
+    const b = e.currentTarget;
+    b.classList.remove("crack"); void b.offsetWidth; b.classList.add("crack");
+    let i;
+    do { i = (Math.random() * CONFIG.petitsMots.length) | 0; } while (i === lastMsg && CONFIG.petitsMots.length > 1);
+    lastMsg = i;
+    document.getElementById("cookie-msg").textContent = CONFIG.petitsMots[i];
+    if (award("biscuit")) renderAlbum();
+  });
+
+  // Installation et hors ligne
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const off = document.getElementById("offline-state");
+  if (standalone) {
+    document.getElementById("inst-t").textContent = "Installé sur ton iPad";
+    off.textContent = "C'est bon, tu joues depuis l'icône. Tout marche hors ligne.";
+  } else if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    off.textContent = "Le site est déjà enregistré pour fonctionner hors ligne.";
+  }
+
+  // Sauvegarde
+  const bkText = document.getElementById("bk-text");
+  document.getElementById("bk-copy").addEventListener("click", async () => {
+    const data = {};
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("leo:")) data[k] = localStorage.getItem(k); } } catch {}
+    const code = "LEO1:" + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    bkText.value = code;
+    try { await navigator.clipboard.writeText(code); toast("Sauvegarde copiée !"); }
+    catch { bkText.select(); toast("Code affiché : sélectionne-le et copie-le."); }
+  });
+  document.getElementById("bk-restore").addEventListener("click", () => {
+    const code = bkText.value.trim();
+    try {
+      if (!code.startsWith("LEO1:")) throw 0;
+      const data = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
+      for (const [k, v] of Object.entries(data)) if (k.startsWith("leo:")) localStorage.setItem(k, v);
+      toast("Progression restaurée !"); renderAlbum();
+    } catch { toast("Ce code de sauvegarde n'est pas valide."); }
+  });
+</script>
+</body>
+</html>

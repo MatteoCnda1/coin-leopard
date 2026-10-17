@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coucou les bébés</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .field { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 3vw, 22px); max-width: 560px; margin: 0 auto; width: 100%; }
+  .hole { position: relative; aspect-ratio: 1; max-width: 100%; overflow: hidden; border-radius: 22px; cursor: pointer; touch-action: none; }
+  .hole::after {
+    content: ""; position: absolute; left: 8%; right: 8%; bottom: 8%; height: 30%; border-radius: 50%;
+    background: radial-gradient(ellipse at center, #2a1f1a 55%, #6b4231 100%); z-index: 0;
+  }
+  .critter {
+    position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font-size: clamp(2.6rem, 13vw, 4.6rem); line-height: 1;
+    transform: translateY(120%); transition: transform .16s ease-out; z-index: 1; pointer-events: none;
+  }
+  .hole.up .critter { transform: translateY(0); }
+  .hole.hit .critter { transform: translateY(0) scale(.7) rotate(-20deg); opacity: .5; }
+  .grass { position: absolute; left: 0; right: 0; bottom: 0; height: 18%; background: var(--sand); z-index: 2; border-top: 2.5px solid var(--edge); }
+  .hole { background: var(--paper-2); border: 2.5px solid var(--edge); }
+  .pop { position: absolute; top: 10%; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 1.4rem; z-index: 3; animation: rise .7s forwards; pointer-events: none; }
+  @keyframes rise { to { transform: translateY(-30px); opacity: 0; } }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-weight: 700; }
+  .timebar { height: 14px; border-radius: 999px; border: 2px solid var(--edge); background: var(--paper-2); overflow: hidden; max-width: 560px; margin: 0 auto 16px; }
+  .timebar i { display: block; height: 100%; background: var(--rose); width: 100%; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Score : <b id="score">0</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Coucou les bébés</h1>
+    <p class="hand">Touche les bébés léopards qui sortent du terrier, pas le serpent ! 40 secondes, sticker à 25 points.</p>
+    <div class="legend"><span>🐆 +1</span><span>💗 +3</span><span>🐍 −2</span></div>
+    <div class="row"><button class="btn" id="go">C'est parti</button></div>
+  </section>
+
+  <section class="sticker board-zone">
+    <div class="timebar"><i id="bar"></i></div>
+    <div class="field" id="field"></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const field = document.getElementById("field");
+  field.innerHTML = Array.from({ length: 9 }, (_, i) => `<div class="hole" data-i="${i}"><div class="critter"></div><div class="grass"></div></div>`).join("");
+  const holes = [...field.children];
+  const DUR = 40;
+  let score = 0, running = false, t0 = 0, spawnT, endT, raf;
+  const state = holes.map(() => ({ kind: null, until: 0 }));
+
+  function hud() {
+    document.getElementById("score").textContent = score;
+    const b = store.get("best:tape", null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+
+  function begin() {
+    score = 0; running = true; t0 = performance.now(); hud();
+    document.getElementById("go").disabled = true;
+    holes.forEach((h, i) => { h.classList.remove("up", "hit"); state[i].kind = null; });
+    spawn(); tick();
+  }
+
+  function spawn() {
+    if (!running) return;
+    const elapsed = (performance.now() - t0) / 1000;
+    const free = state.map((s, i) => s.kind ? -1 : i).filter(i => i >= 0);
+    if (free.length) {
+      const i = free[(Math.random() * free.length) | 0];
+      const r = Math.random();
+      const kind = r < .68 ? "🐆" : r < .8 ? "💗" : "🐍";
+      const stay = Math.max(520, 1100 - elapsed * 14);
+      state[i] = { kind, until: performance.now() + stay };
+      holes[i].querySelector(".critter").textContent = kind;
+      holes[i].classList.remove("hit"); holes[i].classList.add("up");
+    }
+    spawnT = setTimeout(spawn, Math.max(330, 800 - elapsed * 12) * (.7 + Math.random() * .6));
+  }
+
+  function tick() {
+    const now = performance.now();
+    const left = Math.max(0, DUR - (now - t0) / 1000);
+    document.getElementById("bar").style.width = (100 * left / DUR) + "%";
+    state.forEach((s, i) => { if (s.kind && now > s.until) { s.kind = null; holes[i].classList.remove("up"); } });
+    if (left <= 0) return end();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function pop(hole, txt, color) {
+    const p = document.createElement("div");
+    p.className = "pop"; p.textContent = txt; p.style.color = color;
+    hole.append(p); setTimeout(() => p.remove(), 700);
+  }
+
+  field.addEventListener("pointerdown", e => {
+    const h = e.target.closest(".hole"); if (!h || !running) return;
+    const i = +h.dataset.i, s = state[i];
+    if (!s.kind) return;
+    const pts = { "🐆": 1, "💗": 3, "🐍": -2 }[s.kind];
+    score = Math.max(0, score + pts); hud();
+    pop(h, (pts > 0 ? "+" : "") + pts, pts > 0 ? "var(--rose)" : "var(--bad)");
+    if (pts < 0 && navigator.vibrate) navigator.vibrate(80);
+    s.kind = null; h.classList.add("hit");
+    setTimeout(() => h.classList.remove("up", "hit"), 160);
+  });
+
+  function end() {
+    running = false; clearTimeout(spawnT); cancelAnimationFrame(raf);
+    holes.forEach(h => h.classList.remove("up"));
+    document.getElementById("go").disabled = false;
+    const r = best("tape", score); hud();
+    if (score >= 25) award("tape");
+    showEnd({ title: r.isNew ? "Nouveau record !" : "Temps écoulé !", text: `Tu as fait <b>${score}</b> points.`, again: begin });
+  }
+
+  document.getElementById("go").addEventListener("click", begin);
+  hud();
+</script>
+</body>
+</html>

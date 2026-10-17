@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pluie de câlins</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .stage { position: relative; border: 2.5px solid var(--edge); border-radius: 18px; overflow: hidden; background: var(--paper-2); touch-action: none; }
+  canvas { display: block; width: 100%; height: min(560px, 64vh); }
+  .start {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px;
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+  }
+  .start > div { display: grid; gap: 12px; justify-items: center; max-width: 34ch; }
+  .start h2 { font-size: 2rem; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-weight: 700; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Score : <b id="score">0</b></span>
+      <span class="pill" id="lives" aria-label="Vies">🐾🐾🐾</span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Pluie de câlins</h1>
+    <p class="hand">Déplace le panier avec le doigt, la souris ou les flèches. Le sticker se gagne à 40 points.</p>
+  </section>
+
+  <section class="sticker">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="Zone de jeu"></canvas>
+      <div class="start" id="start">
+        <div>
+          <h2 id="start-title">Prête ?</h2>
+          <div class="legend"><span>💗 +1</span><span>🍓 +2</span><span>🌟 +5</span><span>🌧️ −1 vie</span></div>
+          <button class="btn" id="go">C'est parti</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  const startEl = document.getElementById("start");
+  let W, H, dpr, running = false, last = 0, items = [], score = 0, lives = 3, spawnIn = 0, elapsed = 0;
+  const player = { x: 0, w: 70, target: null, speed: 0 };
+  const keys = {};
+  const KINDS = [
+    { e: "💗", pts: 1, w: 60 }, { e: "🍓", pts: 2, w: 18 }, { e: "🌟", pts: 5, w: 5 }, { e: "🌧️", pts: 0, w: 22, bad: true },
+  ];
+  const totalW = KINDS.reduce((s, k) => s + k.w, 0);
+
+  function resize() {
+    dpr = devicePixelRatio || 1;
+    const r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    player.x = Math.min(Math.max(player.x || W / 2, 40), W - 40);
+    draw();
+  }
+  addEventListener("resize", resize);
+
+  function pick() {
+    let r = Math.random() * totalW;
+    for (const k of KINDS) { if ((r -= k.w) < 0) return k; }
+    return KINDS[0];
+  }
+
+  function hud() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = "🐾".repeat(lives) + "·".repeat(3 - lives);
+  }
+  function showBest() {
+    const b = store.get("best:coeurs", null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+
+  function begin() {
+    items = []; score = 0; lives = 3; spawnIn = 0; elapsed = 0;
+    hud(); startEl.hidden = true; running = true; last = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function loop(now) {
+    if (!running) return;
+    const dt = Math.min((now - last) / 1000, .05); last = now; elapsed += dt;
+    const level = 1 + elapsed / 25;
+
+    // déplacement
+    const dir = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.q || keys.a ? 1 : 0);
+    if (dir) { player.target = null; player.x += dir * 420 * dt; }
+    else if (player.target !== null) player.x += (player.target - player.x) * Math.min(1, dt * 14);
+    player.x = Math.min(Math.max(player.x, player.w / 2), W - player.w / 2);
+
+    // apparition
+    spawnIn -= dt;
+    if (spawnIn <= 0) {
+      const k = pick();
+      items.push({ k, x: 20 + Math.random() * (W - 40), y: -30, vy: (110 + Math.random() * 70) * level, sway: Math.random() * 6.28 });
+      spawnIn = Math.max(.28, .85 / level) * (.7 + Math.random() * .6);
+    }
+
+    const py = H - 46;
+    for (const it of items) {
+      it.y += it.vy * dt; it.sway += dt * 2;
+      const ix = it.x + Math.sin(it.sway) * 10;
+      if (!it.gone && it.y > py - 26 && it.y < py + 16 && Math.abs(ix - player.x) < player.w / 2 + 6) {
+        it.gone = true;
+        if (it.k.bad) { lives--; flash = .25; }
+        else { score += it.k.pts; pops.push({ x: ix, y: py - 30, t: 0, txt: "+" + it.k.pts }); }
+        hud();
+      }
+    }
+    items = items.filter(it => !it.gone && it.y < H + 40);
+    for (const p of pops) p.t += dt;
+    pops = pops.filter(p => p.t < .7);
+    if (flash > 0) flash -= dt;
+
+    draw();
+    if (lives <= 0) return end();
+    requestAnimationFrame(loop);
+  }
+  let pops = [], flash = 0;
+
+  function draw() {
+    const css = getComputedStyle(document.documentElement);
+    ctx.clearRect(0, 0, W, H);
+    if (flash > 0) { ctx.fillStyle = "rgba(196,72,106,.18)"; ctx.fillRect(0, 0, W, H); }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "30px serif";
+    for (const it of items) ctx.fillText(it.k.e, it.x + Math.sin(it.sway) * 10, it.y);
+    // panier
+    const py = H - 46;
+    ctx.font = "54px serif";
+    ctx.fillText("🧺", player.x, py);
+    ctx.font = "800 18px Nunito, sans-serif";
+    ctx.fillStyle = css.getPropertyValue("--rose");
+    for (const p of pops) { ctx.globalAlpha = 1 - p.t / .7; ctx.fillText(p.txt, p.x, p.y - p.t * 40); }
+    ctx.globalAlpha = 1;
+  }
+
+  function end() {
+    running = false;
+    const r = best("coeurs", score);
+    showBest();
+    if (score >= 40) award("coeurs");
+    document.getElementById("start-title").textContent = r.isNew ? `Record : ${score} points !` : `${score} points`;
+    document.getElementById("go").textContent = "Rejouer";
+    startEl.hidden = false;
+  }
+
+  function aim(e) {
+    const r = cv.getBoundingClientRect();
+    player.target = e.clientX - r.left;
+  }
+  cv.addEventListener("pointermove", aim);
+  cv.addEventListener("pointerdown", aim);
+  addEventListener("keydown", e => {
+    keys[e.key] = true;
+    if (["ArrowLeft", "ArrowRight"].includes(e.key) && running) e.preventDefault();
+  });
+  addEventListener("keyup", e => { keys[e.key] = false; });
+  document.getElementById("go").addEventListener("click", begin);
+
+  resize(); hud(); showBest();
+</script>
+</body>
+</html>

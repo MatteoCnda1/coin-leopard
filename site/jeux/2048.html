@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2048 Léopard</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 10px;
+    background: var(--taupe); border: 2.5px solid var(--edge); border-radius: 18px;
+    max-width: 460px; width: 100%; margin: 0 auto; touch-action: none; user-select: none;
+  }
+  .cell {
+    aspect-ratio: 1; max-width: 100%; border-radius: 12px; background: color-mix(in srgb, var(--paper) 55%, transparent);
+    display: grid; place-items: center; align-content: center; gap: 0; font-weight: 800;
+  }
+  .cell .e { font-size: clamp(1.5rem, 8vw, 2.5rem); line-height: 1; }
+  .cell .n { font-size: .78rem; font-variant-numeric: tabular-nums; }
+  .cell.t { border: 2.5px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); }
+  .cell.new { animation: grow .18s; }
+  .cell.merged { animation: bump .2s; }
+  @keyframes grow { from { transform: scale(.4); } }
+  @keyframes bump { 50% { transform: scale(1.12); } }
+  .ladder { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .9rem; font-weight: 700; color: var(--cocoa); }
+  .ladder span { white-space: nowrap; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Score : <b id="score">0</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>2048 Léopard</h1>
+    <p class="hand">Glisse avec le doigt ou les flèches. Deux bébés pareils fusionnent en plus grand. Le sticker arrive au lionceau (256).</p>
+    <div class="ladder" id="ladder"></div>
+    <div class="row"><button class="btn" id="restart">Nouvelle partie</button></div>
+  </section>
+
+  <section class="sticker">
+    <div class="grid" id="grid" aria-label="Plateau 4 par 4"></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const TILES = {
+    2: ["🐾", "#f6e7d2"], 4: ["🐣", "#f8dcc0"], 8: ["🐰", "#f5c9b0"], 16: ["🐱", "#f5bcc6"], 32: ["🦊", "#eba98f"],
+    64: ["🐨", "#d9b38c"], 128: ["🐼", "#c8ae8b"], 256: ["🦁", "#e7b45c"], 512: ["🐯", "#e09a4a"],
+    1024: ["🐆", "#b9874f"], 2048: ["👑", "#c4486a"], 4096: ["💎", "#8f3a59"],
+  };
+  const tile = v => TILES[v] || ["✨", "#6b4231"];
+  const gridEl = document.getElementById("grid");
+  let g, score, won256, won2048, newAt, mergedAt;
+
+  document.getElementById("ladder").innerHTML =
+    Object.entries(TILES).slice(0, 11).map(([v, [e]]) => `<span>${e} ${v}</span>`).join("");
+
+  function empty() { const r = []; g.forEach((v, i) => !v && r.push(i)); return r; }
+  function add() {
+    const e = empty(); if (!e.length) return;
+    const i = e[(Math.random() * e.length) | 0];
+    g[i] = Math.random() < .9 ? 2 : 4; newAt.add(i);
+  }
+
+  function start() {
+    g = Array(16).fill(0); score = 0; won256 = false; won2048 = false;
+    newAt = new Set(); mergedAt = new Set();
+    add(); add(); render();
+  }
+
+  function render() {
+    gridEl.innerHTML = g.map((v, i) => {
+      if (!v) return `<div class="cell"></div>`;
+      const [e, bg] = tile(v);
+      const dark = v >= 2048;
+      return `<div class="cell t ${newAt.has(i) ? "new" : ""} ${mergedAt.has(i) ? "merged" : ""}"
+        style="background:${bg};color:${dark ? "#fff7f2" : "#1b1412"}" aria-label="${v}"><span class="e">${e}</span><span class="n">${v}</span></div>`;
+    }).join("");
+    newAt.clear(); mergedAt.clear();
+    document.getElementById("score").textContent = score;
+    const b = store.get("best:2048", null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+
+  // dir: 0 gauche, 1 droite, 2 haut, 3 bas
+  function move(dir) {
+    let moved = false;
+    for (let k = 0; k < 4; k++) {
+      const idx = [0, 1, 2, 3].map(j => dir < 2 ? k * 4 + j : j * 4 + k);
+      if (dir === 1 || dir === 3) idx.reverse();
+      const vals = idx.map(i => g[i]).filter(Boolean);
+      const out = [], mergedPos = [];
+      for (let j = 0; j < vals.length; j++) {
+        if (vals[j] === vals[j + 1]) {
+          const v = vals[j] * 2; out.push(v); mergedPos.push(out.length - 1); score += v; j++;
+          if (v >= 256 && !won256) { won256 = true; award("leo2048"); }
+          if (v === 2048 && !won2048) { won2048 = true; confetti(); toast("👑 Le léopard couronné ! Tu es la reine de la jungle."); }
+        } else out.push(vals[j]);
+      }
+      while (out.length < 4) out.push(0);
+      idx.forEach((i, j) => { if (g[i] !== out[j]) moved = true; g[i] = out[j]; });
+      mergedPos.forEach(p => mergedAt.add(idx[p]));
+    }
+    if (!moved) return;
+    add();
+    best("2048", score);
+    render();
+    if (over()) setTimeout(() => showEnd({ title: "Plus de place !", text: `Score : <b>${score}</b><br>Plus grande tuile : ${tile(Math.max(...g))[0]} ${Math.max(...g)}`, again: start }), 300);
+  }
+
+  function over() {
+    if (empty().length) return false;
+    for (let i = 0; i < 16; i++) {
+      if (i % 4 < 3 && g[i] === g[i + 1]) return false;
+      if (i < 12 && g[i] === g[i + 4]) return false;
+    }
+    return true;
+  }
+
+  addEventListener("keydown", e => {
+    const d = { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3, q: 0, d: 1, z: 2, s: 3 }[e.key];
+    if (d === undefined || document.querySelector(".overlay")) return;
+    e.preventDefault(); move(d);
+  });
+  let sx, sy;
+  gridEl.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; });
+  gridEl.addEventListener("pointerup", e => {
+    if (sx === undefined) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy; sx = undefined;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    move(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 0 : 1) : (dy < 0 ? 2 : 3));
+  });
+  document.getElementById("restart").addEventListener("click", start);
+  start();
+</script>
+</body>
+</html>

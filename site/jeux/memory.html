@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory des bébés</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 520px; margin: 0 auto; width: 100%; }
+  .card { aspect-ratio: 1; max-width: 100%; perspective: 700px; border: 0; padding: 0; background: none; cursor: pointer; }
+  .card .in { position: relative; width: 100%; height: 100%; transition: transform .45s; transform-style: preserve-3d; }
+  .card.up .in, .card.done .in { transform: rotateY(180deg); }
+  .face {
+    position: absolute; inset: 0; border: 2.5px solid var(--edge); border-radius: 16px; backface-visibility: hidden;
+    display: grid; place-items: center; box-shadow: 3px 3px 0 var(--edge);
+  }
+  .face.cover { background: var(--sand) url("../assets/img/leopard.jpg") center / 260% auto; }
+  .face.cover::after { content: "🐾"; font-size: 1.4rem; background: var(--paper); border: 2px solid var(--edge); border-radius: 50%; width: 2.2em; height: 2.2em; display: grid; place-items: center; }
+  .front { background: var(--paper); transform: rotateY(180deg); font-size: clamp(2rem, 9vw, 3.4rem); }
+  .card.done .front { background: var(--blush); }
+  .card.done { cursor: default; }
+  .card.done .in { animation: pop .4s .3s; }
+  @keyframes pop { 50% { transform: rotateY(180deg) scale(1.08); } }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; }
+  .levels .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .board.six { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 600px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Coups : <b id="moves">0</b></span>
+      <span class="pill">Temps : <b id="time">0:00</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Memory des bébés</h1>
+    <p class="hand">Retourne deux cartes à la fois et retrouve chaque petit animal.</p>
+    <div class="row" style="justify-content:space-between">
+      <div class="levels" role="group" aria-label="Taille de la grille">
+        <button class="btn ghost" data-pairs="8" aria-pressed="true">8 paires</button>
+        <button class="btn ghost" data-pairs="10" aria-pressed="false">10 paires</button>
+      </div>
+      <button class="btn" id="restart">Nouvelle partie</button>
+    </div>
+  </section>
+
+  <section class="sticker">
+    <div class="board" id="board" aria-label="Plateau de cartes"></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const ANIMALS = ["🐆", "🐱", "🦊", "🐻", "🐰", "🐼", "🐨", "🦁", "🐹", "🦔"];
+  const NAMES = ["léopard", "chaton", "renard", "ourson", "lapin", "panda", "koala", "lionceau", "hamster", "hérisson"];
+  const board = document.getElementById("board");
+  let pairs = 8, open = [], moves = 0, found = 0, t0 = 0, timer = null, lock = false;
+
+  const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  function showBest() {
+    const b = store.get("best:memory" + pairs, null);
+    document.getElementById("best").textContent = b === null ? "–" : `${b} coups`;
+  }
+
+  function start() {
+    clearInterval(timer); timer = null;
+    open = []; moves = 0; found = 0; lock = false;
+    document.getElementById("moves").textContent = 0;
+    document.getElementById("time").textContent = "0:00";
+    board.classList.toggle("six", pairs === 10);
+    const deck = shuffle([...Array(pairs).keys(), ...Array(pairs).keys()]);
+    board.innerHTML = deck.map((k, i) => `
+      <button class="card" data-k="${k}" aria-label="Carte ${i + 1}, cachée">
+        <div class="in"><div class="face cover"></div><div class="face front" aria-hidden="true">${ANIMALS[k]}</div></div>
+      </button>`).join("");
+    showBest();
+  }
+
+  board.addEventListener("click", e => {
+    const c = e.target.closest(".card");
+    if (!c || lock || c.classList.contains("up") || c.classList.contains("done")) return;
+    if (!timer) { t0 = Date.now(); timer = setInterval(() => document.getElementById("time").textContent = fmt(Math.floor((Date.now() - t0) / 1000)), 500); }
+    c.classList.add("up");
+    c.setAttribute("aria-label", NAMES[c.dataset.k]);
+    open.push(c);
+    if (open.length < 2) return;
+    moves++;
+    document.getElementById("moves").textContent = moves;
+    const [a, b] = open;
+    if (a.dataset.k === b.dataset.k) {
+      a.classList.add("done"); b.classList.add("done");
+      open = []; found++;
+      if (found === pairs) win();
+    } else {
+      lock = true;
+      setTimeout(() => {
+        a.classList.remove("up"); b.classList.remove("up");
+        a.setAttribute("aria-label", "Carte cachée"); b.setAttribute("aria-label", "Carte cachée");
+        open = []; lock = false;
+      }, 850);
+    }
+  });
+
+  function win() {
+    clearInterval(timer);
+    const secs = Math.floor((Date.now() - t0) / 1000);
+    const r = best("memory" + pairs, moves, false);
+    showBest();
+    award("memory");
+    confetti();
+    setTimeout(() => showEnd({
+      title: "Toutes les paires !",
+      text: `${moves} coups en ${fmt(secs)}.${r.isNew ? "<br><b>Nouveau record !</b>" : ""}`,
+      again: start,
+    }), 700);
+  }
+
+  document.querySelectorAll("[data-pairs]").forEach(b => b.addEventListener("click", () => {
+    pairs = +b.dataset.pairs;
+    document.querySelectorAll("[data-pairs]").forEach(x => x.setAttribute("aria-pressed", x === b));
+    start();
+  }));
+  document.getElementById("restart").addEventListener("click", start);
+  start();
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Taquin léopard</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .puzzle { position: relative; width: 100%; max-width: 480px; aspect-ratio: 1; margin: 0 auto; background: var(--ink); border: 3px solid var(--edge); border-radius: 16px; overflow: hidden; touch-action: none; }
+  .pc {
+    position: absolute; border: 1.5px solid #1b1412; border-radius: 8px; cursor: pointer; background-image: url("../assets/img/icon-512.png");
+    transition: left .14s ease-out, top .14s ease-out; display: grid; place-items: start; padding: 4px 7px; box-sizing: border-box;
+  }
+  .pc b { background: #fbf4e8; color: #1b1412; border-radius: 999px; padding: 0 7px; font-size: .85rem; border: 1.5px solid #1b1412; }
+  .hide-num .pc b { display: none; }
+  .puzzle.solved .pc { border-color: transparent; border-radius: 0; }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; }
+  .levels .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .model { width: 90px; height: 90px; border-radius: 12px; border: 2.5px solid var(--edge); background: url("../assets/img/icon-192.png") center / cover; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+    <div class="stats">
+      <span class="pill">Coups : <b id="moves">0</b></span>
+      <span class="pill">Record : <b id="best">–</b></span>
+    </div>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Taquin léopard</h1>
+    <p class="hand">Fais glisser les pièces dans la case vide pour reconstituer l'image.</p>
+    <div class="row" style="justify-content:space-between">
+      <div class="levels" role="group" aria-label="Taille">
+        <button class="btn ghost" data-n="3">3 × 3</button>
+        <button class="btn ghost" data-n="4">4 × 4</button>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="nums">Cacher les numéros</button>
+        <button class="btn" id="mix">Mélanger</button>
+        <div class="model" title="Modèle" aria-label="Image modèle"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sticker board-zone">
+    <div class="puzzle" id="pz"></div>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const pz = document.getElementById("pz");
+  let n = store.get("taquin:n", 3), tiles, moves, showNums = true, playing = false;
+
+  function build() {
+    tiles = [...Array(n * n).keys()]; // tiles[pos] = numéro de pièce, n*n-1 = vide
+    let blank = n * n - 1, last = -1;
+    for (let k = 0; k < n * n * 40; k++) {
+      const nb = neighbors(blank).filter(p => p !== last);
+      const p = nb[(Math.random() * nb.length) | 0];
+      [tiles[blank], tiles[p]] = [tiles[p], tiles[blank]]; last = blank; blank = p;
+    }
+    if (solved()) return build();
+    moves = 0; playing = true;
+    pz.classList.remove("solved");
+    document.querySelectorAll("[data-n]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.n === n));
+    pz.innerHTML = tiles.map(t => t === n * n - 1 ? "" :
+      `<div class="pc" data-t="${t}" style="width:${100 / n}%;height:${100 / n}%;background-size:${n * 100}% ${n * 100}%;background-position:${(t % n) * 100 / (n - 1)}% ${Math.floor(t / n) * 100 / (n - 1)}%"><b>${t + 1}</b></div>`).join("");
+    place(); hud();
+  }
+
+  const neighbors = p => [p - n, p + n, p % n ? p - 1 : -1, p % n < n - 1 ? p + 1 : -1].filter(q => q >= 0 && q < n * n);
+  const solved = () => tiles.every((t, i) => t === i);
+
+  function place() {
+    tiles.forEach((t, pos) => {
+      const el = pz.querySelector(`[data-t="${t}"]`); if (!el) return;
+      el.style.left = (pos % n) * 100 / n + "%"; el.style.top = Math.floor(pos / n) * 100 / n + "%";
+    });
+  }
+  function hud() {
+    document.getElementById("moves").textContent = moves;
+    const b = store.get("best:taquin" + n, null);
+    document.getElementById("best").textContent = b === null ? "–" : b;
+  }
+
+  pz.addEventListener("pointerdown", e => {
+    const el = e.target.closest(".pc"); if (!el || !playing) return;
+    const pos = tiles.indexOf(+el.dataset.t), blank = tiles.indexOf(n * n - 1);
+    const sameRow = Math.floor(pos / n) === Math.floor(blank / n), sameCol = pos % n === blank % n;
+    if (!sameRow && !sameCol) return;
+    const step = sameRow ? Math.sign(pos - blank) : Math.sign(pos - blank) * n;
+    for (let b = blank; b !== pos; b += step) { [tiles[b], tiles[b + step]] = [tiles[b + step], tiles[b]]; moves++; }
+    place(); hud();
+    if (solved()) win();
+  });
+
+  function win() {
+    playing = false; pz.classList.add("solved");
+    const r = best("taquin" + n, moves, false); hud();
+    award("taquin"); confetti();
+    setTimeout(() => showEnd({ title: "Image reconstituée !", text: `En ${moves} coups.${r.isNew ? "<br><b>Nouveau record !</b>" : ""}`, againLabel: "Encore", again: build }), 600);
+  }
+
+  document.querySelectorAll("[data-n]").forEach(b => b.addEventListener("click", () => { n = +b.dataset.n; store.set("taquin:n", n); build(); }));
+  document.getElementById("mix").addEventListener("click", build);
+  document.getElementById("nums").addEventListener("click", e => {
+    showNums = !showNums; pz.classList.toggle("hide-num", !showNums);
+    e.currentTarget.textContent = showNums ? "Cacher les numéros" : "Montrer les numéros";
+  });
+  build();
+</script>
+</body>
+</html>

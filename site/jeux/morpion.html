@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Morpion des pattes</title>
+<!--HEAD-->
+<meta name="theme-color" content="#c8ae8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coin Léopard">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<!--/HEAD-->
+<style>
+  .ttt { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 420px; margin: 0 auto; width: 100%; }
+  .sq {
+    aspect-ratio: 1; max-width: 100%; border: 2.5px solid var(--edge); border-radius: 20px; background: var(--paper-2);
+    font-size: clamp(2.4rem, 12vw, 4.2rem); cursor: pointer; display: grid; place-items: center; box-shadow: 3px 3px 0 var(--edge);
+  }
+  .sq:disabled { cursor: default; }
+  .sq.win { background: var(--blush); animation: pulse .6s 2; }
+  .sq span { animation: drop .25s; }
+  @keyframes drop { from { transform: scale(.3); } }
+  @keyframes pulse { 50% { transform: scale(1.07); } }
+  .score { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; text-align: center; max-width: 420px; margin: 0 auto 16px; }
+  .score div { background: var(--paper-2); border-radius: 14px; padding: 8px; font-weight: 800; }
+  .score b { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; }
+  .levels .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .msg { text-align: center; font-family: var(--f-hand); font-size: 1.7rem; color: var(--cocoa); min-height: 1.4em; margin-top: 14px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← Le repaire</a>
+  </div>
+
+  <section class="sticker game-head">
+    <h1>Morpion des pattes</h1>
+    <p class="hand">Toi 🐾 contre Léo le léopard 🐆. Aligne trois pattes. Gagne trois parties pour le sticker.</p>
+    <div class="row" style="justify-content:space-between">
+      <div class="levels" role="group" aria-label="Niveau de Léo">
+        <button class="btn ghost" data-lvl="calin">Léo câlin</button>
+        <button class="btn ghost" data-lvl="malin">Léo malin</button>
+      </div>
+      <button class="btn" id="again">Nouvelle partie</button>
+    </div>
+  </section>
+
+  <section class="sticker board-zone">
+    <div class="score"><div>Toi<b id="sw">0</b></div><div>Nuls<b id="sd">0</b></div><div>Léo<b id="sl">0</b></div></div>
+    <div class="ttt" id="ttt"></div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+  </section>
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+  const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  const ME = "🐾", LEO = "🐆";
+  let b, over, lvl = store.get("morpion:lvl", "calin"), first = ME;
+  let S = store.get("morpion:score", { w: 0, d: 0, l: 0 });
+  const ttt = document.getElementById("ttt"), msg = document.getElementById("msg");
+
+  function winner(g) {
+    for (const l of LINES) if (g[l[0]] && g[l[0]] === g[l[1]] && g[l[1]] === g[l[2]]) return { p: g[l[0]], line: l };
+    return g.every(Boolean) ? { p: "nul" } : null;
+  }
+
+  function minimax(g, turn) {
+    const w = winner(g);
+    if (w) return { s: w.p === LEO ? 10 : w.p === ME ? -10 : 0 };
+    let bestM = null;
+    for (let i = 0; i < 9; i++) if (!g[i]) {
+      g[i] = turn;
+      const r = minimax(g, turn === LEO ? ME : LEO);
+      g[i] = null;
+      const s = r.s - Math.sign(r.s);
+      if (!bestM || (turn === LEO ? s > bestM.s : s < bestM.s)) bestM = { s, i };
+    }
+    return bestM;
+  }
+
+  function leoMove() {
+    const free = b.map((v, i) => v ? -1 : i).filter(i => i >= 0);
+    const mistake = lvl === "calin" ? .55 : .12;
+    if (Math.random() < mistake) {
+      // même en câlin, Léo saisit une victoire évidente une fois sur deux
+      if (lvl === "calin" && Math.random() < .5) {
+        for (const i of free) { b[i] = LEO; const w = winner(b); b[i] = null; if (w && w.p === LEO) return i; }
+      }
+      return free[(Math.random() * free.length) | 0];
+    }
+    return minimax([...b], LEO).i;
+  }
+
+  function start() {
+    b = Array(9).fill(null); over = false;
+    document.querySelectorAll("[data-lvl]").forEach(x => x.setAttribute("aria-pressed", x.dataset.lvl === lvl));
+    render();
+    if (first === LEO) { msg.textContent = "Léo commence…"; setTimeout(play, 500); }
+    else msg.textContent = "À toi de commencer !";
+  }
+
+  function render(line) {
+    ttt.innerHTML = b.map((v, i) => `<button class="sq ${line && line.includes(i) ? "win" : ""}" data-i="${i}" ${v || over ? "disabled" : ""} aria-label="Case ${i + 1}${v ? (v === ME ? ", toi" : ", Léo") : ""}">${v ? `<span>${v}</span>` : ""}</button>`).join("");
+    document.getElementById("sw").textContent = S.w;
+    document.getElementById("sd").textContent = S.d;
+    document.getElementById("sl").textContent = S.l;
+  }
+
+  function check() {
+    const w = winner(b); if (!w) return false;
+    over = true;
+    if (w.p === ME) { S.w++; msg.textContent = "Tu as gagné ! Léo boude un peu."; confetti(); if (S.w >= 3) award("morpion"); }
+    else if (w.p === LEO) { S.l++; msg.textContent = "Léo gagne cette fois. Revanche ?"; }
+    else { S.d++; msg.textContent = "Match nul, câlin pour tout le monde."; }
+    store.set("morpion:score", S);
+    first = first === ME ? LEO : ME;
+    render(w.line);
+    return true;
+  }
+
+  function play() {
+    if (over) return;
+    b[leoMove()] = LEO;
+    render();
+    if (!check()) msg.textContent = "À toi !";
+  }
+
+  ttt.addEventListener("click", e => {
+    const s = e.target.closest(".sq"); if (!s || s.disabled || over) return;
+    b[+s.dataset.i] = ME; over = true; render(); over = false;
+    if (check()) return;
+    msg.textContent = "Léo réfléchit…";
+    setTimeout(play, 420);
+  });
+  document.querySelectorAll("[data-lvl]").forEach(x => x.addEventListener("click", () => { lvl = x.dataset.lvl; store.set("morpion:lvl", lvl); start(); }));
+  document.getElementById("again").addEventListener("click", start);
+  start();
+</script>
+</body>
+</html>
